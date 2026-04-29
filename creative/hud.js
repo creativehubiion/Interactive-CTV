@@ -115,7 +115,8 @@
     if (typeof envelope === 'string') {
       try { envelope = JSON.parse(envelope); } catch { return; }
     }
-    if (envelope && typeof envelope.protocol === 'string' && envelope.protocol.indexOf('SIMID') === 0) {
+    if (envelope && typeof envelope.type === 'string' &&
+        (envelope.type.indexOf('SIMID:') === 0 || envelope.type === 'resolve' || envelope.type === 'reject' || envelope.type === 'createSession')) {
       add('msg', `← ${envelope.type} #${envelope.messageId}` + (envelope.args && Object.keys(envelope.args).length ? ' ' + summarize(envelope.args) : ''));
       if (envelope.type === 'Player:init')           setMeta('init received');
       if (envelope.type === 'Player:startCreative')  setMeta('startCreative — active');

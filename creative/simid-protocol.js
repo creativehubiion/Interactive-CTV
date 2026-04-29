@@ -11,12 +11,18 @@
 (function (global) {
   'use strict';
 
-  // The IAB reference implementation tags outgoing messages with
-  // `protocol: "SIMID:1.1"`. Some players send bare `"SIMID"`. Accept either
-  // — match anything that starts with "SIMID".
-  const PROTOCOL_OUT = 'SIMID:1.1';
-  const isSimidEnvelope = (envelope) =>
-    envelope && typeof envelope.protocol === 'string' && envelope.protocol.indexOf('SIMID') === 0;
+  // Google's reference creative (sample_simid_compiled.html) omits the
+  // protocol field entirely — its envelope is just {type,sessionId,messageId,
+  // timestamp,args}. IMA sends the same shape. Filtering inbound messages on
+  // a `protocol` field that IMA never sets caused us to silently drop every
+  // Player:* message, including init — which is why our overlay never showed
+  // even though the linear played.
+  // Filter by message TYPE instead.
+  const isSimidEnvelope = (envelope) => {
+    if (!envelope || typeof envelope.type !== 'string') return false;
+    const t = envelope.type;
+    return t.indexOf('SIMID:') === 0 || t === 'resolve' || t === 'reject' || t === 'createSession';
+  };
 
   // Message types in the SIMID 1.1 wire format are namespace-prefixed with
   // "SIMID:" — i.e. "SIMID:Player:init", not bare "Player:init". Google's
@@ -123,11 +129,12 @@
     /** Emit a creative -> player message. Returns a Promise resolved on player ack. */
     send(type, args = {}) {
       const messageId = this._nextMessageId++;
+      // Envelope shape mirrors Google's reference creative exactly:
+      // {type, sessionId, messageId, timestamp, args} — no protocol field.
       const envelope = {
-        protocol: PROTOCOL_OUT,
+        type,
         sessionId: this._sessionId,
         messageId,
-        type,
         timestamp: Date.now(),
         args,
       };
@@ -159,10 +166,9 @@
       // createSession is sent without the SIMID: prefix and without our
       // sessionId-tracked Promise machinery, matching the reference impl.
       const envelope = {
-        protocol: PROTOCOL_OUT,
+        type: 'createSession',
         sessionId: this._sessionId,
         messageId: this._nextMessageId++,
-        type: 'createSession',
         timestamp: Date.now(),
         args: {},
       };
@@ -236,10 +242,9 @@
 
     _reply(originalMsg, success, value) {
       const replyEnvelope = {
-        protocol: PROTOCOL_OUT,
+        type: success ? 'resolve' : 'reject',
         sessionId: this._sessionId,
         messageId: this._nextMessageId++,
-        type: success ? 'resolve' : 'reject',
         timestamp: Date.now(),
         args: { messageId: originalMsg.messageId, value },
       };
@@ -270,5 +275,4 @@
 
   global.SimidCreative   = SimidCreative;
   global.SimidMessages   = { Player: PlayerMessage, Creative: CreativeMessage, Media: MediaMessage };
-  global.SimidProtocolOut = PROTOCOL_OUT;
 })(window);

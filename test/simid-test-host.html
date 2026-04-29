@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1920, initial-scale=1, user-scalable=no" />
+<title>SIMID Test Host</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #111; color: #ddd; font: 14px/1.4 monospace; overflow: hidden; }
+  #stage   { position: relative; width: 100vw; height: 100vh; }
+  #video   { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; z-index: 1; }
+  #simid   { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; z-index: 2; background: transparent; }
+  #log     { position: absolute; left: 1vw; bottom: 1vh; right: 1vw; max-height: 32vh;
+             background: rgba(0,0,0,.85); color: #c8ffb9; padding: .5rem .8rem;
+             font: 12px/1.35 'Consolas', monospace; overflow: hidden; z-index: 3;
+             border: 1px solid #3a5a2a; pointer-events: none; }
+  .lc-info { color: #c8ffb9; }
+  .lc-msg  { color: #ffd2f0; }
+  .lc-err  { color: #ff8a8a; }
+  .lc-key  { color: #ffe27a; }
+  .ts      { opacity: .6; margin-right: .4rem; }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <video id="video" muted playsinline autoplay
+         src="https://storage.googleapis.com/interactive-media-ads/media/android.mp4"></video>
+  <iframe id="simid" sandbox="allow-scripts allow-same-origin allow-presentation"
+          allow="autoplay" src="../creative/index.html"></iframe>
+</div>
+<div id="log"><b>SIMID test host</b> — mimics IMA's player. Watch this log; press D-pad keys on the remote.</div>
+
+<script>
+/**
+ * Minimal SIMID 1.1 PLAYER. Mirrors what IMA does:
+ *   1. wait for `createSession` from the creative
+ *   2. send `SIMID:Player:init` with environmentData + creativeData
+ *   3. wait for resolve
+ *   4. send `SIMID:Player:startCreative`
+ *   5. forward Media:* events from the <video>
+ */
+(function () {
+  const PROTOCOL = 'SIMID:1.1';
+  const iframe   = document.getElementById('simid');
+  const video    = document.getElementById('video');
+  const logEl    = document.getElementById('log');
+
+  let sessionId  = '';
+  let nextMsgId  = 1000;
+  const pending  = new Map();
+
+  const ts = () => ((performance.now() / 1000).toFixed(2) + 's').padStart(8, ' ');
+  function log(level, text) {
+    const row = document.createElement('div');
+    row.className = 'lc-' + level;
+    row.innerHTML = '<span class="ts">' + ts() + '</span>' + text.replace(/[&<>]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));
+    logEl.appendChild(row);
+    while (logEl.childNodes.length > 18) logEl.removeChild(logEl.firstChild);
+  }
+
+  function send(type, args) {
+    const messageId = nextMsgId++;
+    const env = { protocol: PROTOCOL, sessionId, messageId, type, timestamp: Date.now(), args: args || {} };
+    log('msg', `→ ${type} #${messageId}`);
+    iframe.contentWindow.postMessage(JSON.stringify(env), '*');
+    return messageId;
+  }
+
+  function reply(originalMsg, success, value) {
+    const env = {
+      protocol: PROTOCOL, sessionId,
+      messageId: nextMsgId++, type: success ? 'resolve' : 'reject',
+      timestamp: Date.now(),
+      args: { messageId: originalMsg.messageId, value: value || {} },
+    };
+    iframe.contentWindow.postMessage(JSON.stringify(env), '*');
+  }
+
+  window.addEventListener('message', (event) => {
+    let env = event.data;
+    if (typeof env === 'string') { try { env = JSON.parse(env); } catch { return; } }
+    if (!env || typeof env.protocol !== 'string' || env.protocol.indexOf('SIMID') !== 0) return;
+
+    log('msg', `← ${env.type} #${env.messageId}`);
+
+    if (env.type === 'createSession') {
+      sessionId = env.sessionId;
+      reply(env, true, {});
+      log('info', `session established: ${sessionId}`);
+      sendInit();
+      return;
+    }
+
+    if (env.type === 'resolve' || env.type === 'reject') {
+      const p = pending.get(env.args && env.args.messageId);
+      if (p) {
+        pending.delete(env.args.messageId);
+        (env.type === 'resolve' ? p.resolve : p.reject)(env.args && env.args.value);
+      }
+      return;
+    }
+
+    // Auto-resolve creative requests so the creative's promise machinery works.
+    if (env.type === 'SIMID:Creative:requestPlay')   { video.play();  reply(env, true, {}); return; }
+    if (env.type === 'SIMID:Creative:requestPause')  { video.pause(); reply(env, true, {}); return; }
+    if (env.type === 'SIMID:Creative:requestStop')   { reply(env, true, {}); return; }
+    if (env.type === 'SIMID:Creative:requestSkip')   { reply(env, true, {}); return; }
+    if (env.type === 'SIMID:Creative:reportTracking'){ reply(env, true, {}); return; }
+    if (env.type === 'SIMID:Creative:ready')         { reply(env, true, {}); return; }
+    if (env.type === 'SIMID:Creative:log')           { reply(env, true, {}); return; }
+    if (env.type === 'SIMID:Creative:fatalError')    { reply(env, true, {}); log('err', 'creative fatal: ' + JSON.stringify(env.args)); return; }
+  });
+
+  function sendInit() {
+    const r = iframe.getBoundingClientRect();
+    const env = {
+      videoDimensions:    { x: 0, y: 0, width: r.width, height: r.height },
+      creativeDimensions: { x: 0, y: 0, width: r.width, height: r.height },
+      fullscreen:         false,
+      fullscreenAllowed:  true,
+      variableDurationAllowed: true,
+      skippableState:     'adHandles',
+      version:            '1.1',
+      muted:              video.muted,
+      volume:             video.volume,
+    };
+    const id = send('SIMID:Player:init', {
+      environmentData: env,
+      creativeData: {
+        adParameters: '{"theme":"default","brand":"YOUR BRAND","debug":true}',
+        clickThruUrl: 'https://creativehubiion.github.io/Interactive-CTV/',
+      },
+    });
+    pending.set(id, {
+      resolve: () => { log('info', 'init resolved → startCreative'); send('SIMID:Player:startCreative'); },
+      reject:  (e) => log('err', 'init rejected: ' + JSON.stringify(e)),
+    });
+  }
+
+  // Forward Media:* events from the video element.
+  ['durationchange','ended','error','pause','play','playing','seeked','seeking','stalled','timeupdate','volumechange'].forEach((evt) => {
+    video.addEventListener(evt, () => {
+      const args = {};
+      if (evt === 'durationchange') args.duration = video.duration;
+      if (evt === 'timeupdate')     args.currentTime = video.currentTime;
+      if (evt === 'volumechange')   args.volume = video.volume;
+      send('SIMID:Media:' + evt, args);
+    });
+  });
+
+  // Show key events the host receives (the iframe sees them too if focused).
+  document.addEventListener('keydown', (e) => log('key', `host keydown key="${e.key}" code=${e.code} kc=${e.keyCode}`));
+
+  // Auto-focus the iframe so D-pad presses go to the SIMID creative.
+  iframe.addEventListener('load', () => {
+    log('info', 'iframe loaded: ' + iframe.src);
+    try { iframe.contentWindow.focus(); } catch (e) { log('err', 'iframe focus failed: ' + e.message); }
+  });
+
+  log('info', 'host booting — waiting for createSession from iframe');
+})();
+</script>
+</body>
+</html>

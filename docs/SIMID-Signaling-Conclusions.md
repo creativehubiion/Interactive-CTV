@@ -96,6 +96,75 @@ Copy-paste this into your Limelight support / engineering ticket:
 >
 > Required to unlock SIMID inventory signaling for iion's interactive ad campaigns. This declares api correctly per-impression regardless of how supply tags or publishers are structured.
 
+## Building a validated SIMID-capable inventory list
+
+Two methods (separate from the routing-layer fix above):
+
+### Method A — Publisher questionnaire (cheap, partial completion)
+
+Ask each publisher: "Which apps use IMA Client-Side SDK with SIMID? Which
+use SSAI / RAF / proprietary SDKs? Per app + per platform."
+
+- Free
+- Captures publisher intent, useful for premium relationships
+- ~30–50% completion rate at best; long-tail FAST publishers rarely respond
+- Self-reported ≠ measured; answers go stale on SDK upgrades
+- Best used for top-N premium publishers, not as primary mechanism
+
+### Method B — Test traffic + `simid_init` beacon (empirical, costs money)
+
+Run paid SIMID delivery across the inventory, log `simid_init` events
+when the creative renders, calculate render rate per (publisher, app,
+platform).
+
+| Scope | Impressions | Approx cost (with delivery slippage) |
+|---|---|---|
+| 10 imps × 2,714 unique combos (full inventory) | 27 K | **$1,500–$2,500** |
+| 100 imps × 2,714 (95% statistical confidence) | 271 K | **$15K–$24K** |
+| **Focus on "maybe" bucket only (Samsung/LG/Vizio)** | ~1,000 combos × 50 | **$3K–$5K** ← recommended |
+| Sanity check "yes" bucket (Fire TV/Android) | ~600 × 30 | $1K–$1.5K |
+
+Recommended: **target the "maybe" bucket** ($3K–$5K). That's the 57.9%
+of your inventory we can't heuristically classify. The "yes" and "no"
+buckets are already known from platform info.
+
+### Recommended sequencing
+
+1. **Phase 1 — get the signal flowing** (no spend; weeks): push Limelight
+   to add platform-based api inference at SSP. Solves routing for every
+   impression. Engineering tickets only.
+2. **Phase 2 — empirical sweep on the "maybe" bucket** ($3K–$5K, 2–4
+   weeks): run SIMID test through Limelight, log `simid_init` per app,
+   build validated list.
+3. **Phase 3 — questionnaire for top N premium publishers** (free,
+   ongoing): supplementary detail on relationships that matter for
+   sales / pricing.
+4. **Phase 4 — continuous monitoring** (free once running): every real
+   SIMID campaign generates validation data via the DMP tracker; the
+   list auto-updates over time.
+
+### Infrastructure already in place
+
+- ✅ SIMID creative firing `simid_init` on render (fruit-catch)
+- ✅ DMP tracker integration logs events with full context
+- ✅ VAST tag URL serving via Limelight
+- ✅ Inventory classifier output (`tools/ctv-inventory-classified.csv`) gives the test target list
+
+The Phase 2 test campaign needs only a Limelight budget allocation,
+targeting set to the "maybe" bucket, and a post-campaign DMP query:
+
+```sql
+SELECT publisher_id, app_id_bundle_id, os,
+       COUNT(*) AS impressions,
+       SUM(CASE WHEN event_name = 'simid_init' THEN 1 ELSE 0 END) AS rendered,
+       100.0 * SUM(CASE WHEN event_name = 'simid_init' THEN 1 ELSE 0 END) / COUNT(*) AS pct_rendered
+FROM dmp_events
+WHERE creative_id = 'CR_FRUITCATCH'
+GROUP BY publisher_id, app_id_bundle_id, os
+HAVING COUNT(*) >= 30
+ORDER BY pct_rendered DESC;
+```
+
 ## Pre-meeting checklist (before escalating to Limelight)
 
 These can each be done by your supply team in <5 minutes; sequence first to avoid sending an engineering ticket if a config-only path exists:

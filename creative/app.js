@@ -1,25 +1,23 @@
 /**
- * Interactive CTV ad — embeds the Allkinds Phaser game inside an iframe and
- * speaks SIMID 1.1 to the IMA player around it.
+ * Interactive CTV ad — Fruit-catch mini-game inside our SIMID 1.1 shell.
  *
  * Lifecycle:
- *   1. Page parses → simid-protocol.js handshakes with IMA (createSession,
- *      resolves Player:init, resolves Player:startCreative).
- *   2. On start: linear video paused via Creative:requestPause, stage shown,
- *      iframe given focus so D-pad keypresses go to the game.
- *   3. User plays. The game handles all in-game input itself (Phaser's own
- *      keydown listener inside the iframe).
- *   4. Exit: any of {Back/Escape from remote, focused Skip button + OK,
- *      INACTIVITY_MS of no input, HARD_CAP_MS hit, game complete signal}
- *      → linear video resumed, Creative:requestStop sent, iframe torn down.
+ *   1. simid-protocol.js handshakes with IMA on load (createSession,
+ *      resolves Player:init — which un-hides the iframe — resolves
+ *      Player:startCreative).
+ *   2. On startCreative we pause the linear (Creative:requestPause), show
+ *      the stage, and start the game.
+ *   3. User plays. D-pad Left/Right moves the basket, Up moves focus to
+ *      the Skip button, OK on Skip ends the round, Back exits immediately.
+ *   4. Round ends naturally at 30 s with an end card. We then resume the
+ *      linear (Creative:requestPlay) and request stop (Creative:requestStop)
+ *      so the ad slot wraps cleanly.
  *
- * Exit guardrails (IAB-recommended; required by most SSP QA):
- *   - Visible Skip control (focused with one D-pad press from anywhere)
- *   - Back/Escape always skips
- *   - INACTIVITY_MS = 60s with no input → auto-skip
- *   - HARD_CAP_MS = 180s absolute max → auto-skip regardless of activity
- *   - Watching for postMessage events from the game iframe — if the game
- *     emits a "complete" event, we resume the linear cleanly
+ * Exit guardrails (IAB-recommended; required by most SSP QA gates):
+ *   - Visible Skip button (Up arrow brings focus, OK confirms)
+ *   - Back/Escape → instant skip
+ *   - 60 s of zero remote activity → auto-skip
+ *   - 180 s hard cap → force-exit
  */
 (function () {
   'use strict';
@@ -48,17 +46,41 @@
   let inactivityTimer = null;
   let hardCapTimer    = null;
 
-  // -------- Lifecycle ------------------------------------------------------
+  // -------- DOM ------------------------------------------------------------
+  const stage      = document.getElementById('stage');
+  const fieldEl    = document.getElementById('field');
+  const playerEl   = document.getElementById('player');
+  const scoreEl    = document.getElementById('score');
+  const timerEl    = document.getElementById('timer');
+  const endcard    = document.getElementById('endcard');
+  const endTitle   = document.getElementById('end-title');
+  const endScoreEl = document.getElementById('end-score');
+  const skipBtn    = document.getElementById('skip');
+  const hint       = document.getElementById('hint');
+
+  const game = new FruitCatchGame({
+    field: fieldEl,
+    player: playerEl,
+    scoreEl, timerEl,
+    endcard, endTitle, endScoreEl,
+  });
+
+  game.events.on('end', (score) => {
+    log('Round ended — score=' + score);
+    simid.reportTracking('gameComplete', { score }).catch(() => {});
+    // Brief pause so the user reads the end card, then tear down.
+    setTimeout(() => teardown('game-complete'), 2000);
+  });
+
+  // -------- SIMID lifecycle ------------------------------------------------
   simid.addEventListener('init',    () => log('Player:init handled'));
   simid.addEventListener('start',   onStart);
   simid.addEventListener('stopped', () => teardown('player-stopped'));
   simid.addEventListener('skipped', () => teardown('player-skipped'));
 
-  // Some hosts never deliver Player:startCreative (older IMA, custom players).
-  // 2-second fallback so the game still plays in those environments.
   setTimeout(() => {
     if (!started) {
-      log('No startCreative in 2s — falling back to auto-start');
+      log('No startCreative in 2 s — falling back to auto-start');
       onStart();
     }
   }, 2000);
@@ -66,34 +88,24 @@
   function onStart() {
     if (started) return;
     started = true;
-    log('Player:startCreative — pausing linear, showing game');
-
-    // Pause the linear so the game runs as long as needed.
+    log('Player:startCreative — pausing linear, starting game');
     simid.requestPause().catch(() => {});
-
     showStage();
     armInactivity();
     armHardCap();
     simid.reportTracking('creativeView').catch(() => {});
+    // Defer game start one frame so layout/measure is correct.
+    requestAnimationFrame(() => game.start());
   }
 
   // -------- Stage / Focus --------------------------------------------------
-  const stage   = document.getElementById('stage');
-  const iframe  = document.getElementById('game');
-  const skipBtn = document.getElementById('skip');
-
   function showStage() {
     stage.classList.add('visible');
     stage.setAttribute('aria-hidden', 'false');
     window.focus();
-    // Focus the iframe so the game's keydown listener gets D-pad presses.
-    // On Fire TV WebView, iframe.contentWindow.focus() is allowed across
-    // origin in this context (we're already inside an iframe ourselves;
-    // the WebView treats the focus call as user-initiated).
-    setTimeout(() => {
-      try { iframe.contentWindow.focus(); }
-      catch (e) { log('iframe focus failed: ' + e.message); }
-    }, 100);
+    // We don't actually focus the body for D-pad — keydown listeners on
+    // document handle everything. But focusing prevents focus from being
+    // stuck on something else.
   }
 
   // -------- Exit guardrails ------------------------------------------------
@@ -101,7 +113,7 @@
     clearTimeout(inactivityTimer);
     inactivityTimer = setTimeout(() => {
       simid.reportTracking('inactivity').catch(() => {});
-      log(`Inactivity ${INACTIVITY_MS}ms — auto-skip`);
+      log(`Inactivity ${INACTIVITY_MS} ms — auto-skip`);
       teardown('inactivity');
     }, INACTIVITY_MS);
   }
@@ -110,7 +122,7 @@
     clearTimeout(hardCapTimer);
     hardCapTimer = setTimeout(() => {
       simid.reportTracking('hardCap').catch(() => {});
-      log(`Hard cap ${HARD_CAP_MS}ms — force exit`);
+      log(`Hard cap ${HARD_CAP_MS} ms — force exit`);
       teardown('hard-cap');
     }, HARD_CAP_MS);
   }
@@ -122,22 +134,23 @@
     dismissed = true;
     clearTimeout(inactivityTimer);
     clearTimeout(hardCapTimer);
+    game.stop();
     stage.classList.remove('visible');
     stage.setAttribute('aria-hidden', 'true');
     log(`Teardown: ${reason}`);
-    // Resume the linear so it can play out + fire complete tracking.
     simid.requestPlay().catch(() => {});
-    // Tell the player to take the ad slot down.
     simid.requestStop(reason).catch(() => {});
   }
 
   // -------- Input ----------------------------------------------------------
-  // We listen at the parent level too so we can catch Back / OK on the Skip
-  // button. Game-internal D-pad navigation is handled by the iframe's own
-  // listener once it has focus.
+  function fadeHintOnce() {
+    if (hint && !hint.classList.contains('faded')) hint.classList.add('faded');
+  }
+
   document.addEventListener('keydown', (e) => {
     if (!started || dismissed) return;
     pokeInactivity();
+    fadeHintOnce();
 
     if (matchKey(e, KEY.BACK)) {
       simid.reportTracking('skip').catch(() => {});
@@ -147,8 +160,7 @@
       return;
     }
 
-    // OK on the focused Skip button skips. Otherwise OK falls through to
-    // the iframe (its keydown listener gets it because it has focus).
+    // OK on Skip button → confirm skip.
     if (matchKey(e, KEY.OK) && document.activeElement === skipBtn) {
       simid.reportTracking('skip').catch(() => {});
       teardown('user-skip-button');
@@ -156,62 +168,37 @@
       return;
     }
 
-    // Up arrow — pull focus to the Skip button. Provides a way to escape
-    // the game without exiting the ad if the user wants to confirm skip.
-    if (matchKey(e, KEY.UP) && document.activeElement === iframe) {
+    // Up arrow grabs focus to Skip from anywhere.
+    if (matchKey(e, KEY.UP)) {
       skipBtn.focus();
       e.preventDefault();
       return;
     }
+
+    // Down from Skip returns to game (and clears focus).
     if (matchKey(e, KEY.DOWN) && document.activeElement === skipBtn) {
-      try { iframe.contentWindow.focus(); } catch {}
+      skipBtn.blur();
       e.preventDefault();
       return;
     }
+
+    // Game movement — only when Skip isn't focused.
+    if (document.activeElement !== skipBtn) {
+      if (matchKey(e, KEY.LEFT))  { game.handleKey('left',  true);  e.preventDefault(); return; }
+      if (matchKey(e, KEY.RIGHT)) { game.handleKey('right', true);  e.preventDefault(); return; }
+    }
+  });
+
+  document.addEventListener('keyup', (e) => {
+    if (!started || dismissed) return;
+    if (matchKey(e, KEY.LEFT))  game.handleKey('left',  false);
+    if (matchKey(e, KEY.RIGHT)) game.handleKey('right', false);
   });
 
   skipBtn.addEventListener('click', () => {
     simid.reportTracking('skip').catch(() => {});
     teardown('user-skip-button');
   });
-
-  // -------- Game completion signals ----------------------------------------
-  // The Allkinds game may post messages on win/lose. Listen for any
-  // recognisable completion event and tear down cleanly. We also forward
-  // every message to the HUD for diagnostics.
-  window.addEventListener('message', (event) => {
-    let payload = event.data;
-    if (typeof payload === 'string') {
-      try { payload = JSON.parse(payload); } catch { /* not JSON */ }
-    }
-    if (!payload || typeof payload !== 'object') return;
-
-    // Skip SIMID envelopes — those go to the SIMID protocol handler.
-    if (typeof payload.type === 'string' &&
-        (payload.type.indexOf('SIMID:') === 0 ||
-         payload.type === 'resolve' ||
-         payload.type === 'reject' ||
-         payload.type === 'createSession')) {
-      return;
-    }
-
-    // Game-emitted events. We don't know the exact schema yet — accept
-    // multiple common shapes.
-    const evtName = payload.event || payload.type || payload.action;
-    if (!evtName) return;
-
-    log('Game event: ' + evtName);
-
-    if (/^(complete|completed|finish|finished|win|won|gameOver|gameComplete)$/i.test(evtName)) {
-      simid.reportTracking('gameComplete', payload).catch(() => {});
-      // Small delay so the game's own end-screen has time to appear.
-      setTimeout(() => teardown('game-complete'), 1500);
-    }
-  });
-
-  // Activity heartbeat — any keypress, any incoming game message resets
-  // the inactivity timer.
-  document.addEventListener('keydown', () => pokeInactivity(), true);
 
   // Kick off the SIMID handshake.
   simid.createSession();

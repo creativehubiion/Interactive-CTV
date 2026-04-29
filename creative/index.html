@@ -3,16 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=1920, initial-scale=1, user-scalable=no" />
-  <title>Interactive CTV Ad — Allkinds</title>
+  <title>Interactive CTV Ad — Fruit Catch</title>
   <link rel="stylesheet" href="styles.css" />
 
-  <!--
-    Early-bird message buffer. The iframe may receive SIMID:Player:init
-    from IMA before our external scripts finish loading on slow CTV
-    WebViews. If we miss init, IMA never resolves and the iframe stays
-    hidden. This inline script captures every postMessage into a buffer
-    that simid-protocol.js drains as soon as it loads.
-  -->
+  <!-- Early-bird message buffer (see KNOWLEDGE-BASE.md §2 for why). -->
   <script>
     (function () {
       window.__simidEarlyBuffer = [];
@@ -24,27 +18,41 @@
   </script>
 </head>
 <body>
-  <!--
-    Game stage. The Phaser game is embedded in an iframe; our SIMID layer
-    handles the postMessage handshake with IMA. The iframe gets keyboard
-    focus once SIMID:Player:startCreative arrives, so D-pad presses on
-    the TV remote reach the game's own keydown listener directly.
-
-    The "skip" button is visible only briefly to keep the experience
-    clean, but always reachable via the Back button on the remote.
-  -->
   <div id="stage" class="stage" aria-hidden="true">
-    <iframe id="game"
-            class="game-frame"
-            title="Allkinds — interactive ad"
-            allow="autoplay; gamepad; fullscreen"
-            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-            src="https://tech-iion.github.io/advertiser-creatives/allkindsLandscape/"></iframe>
 
-    <button id="skip" class="skip-btn" tabindex="0" aria-label="Skip ad">Skip ▶</button>
+    <!-- Solid background panel. Full-screen, opaque — covers the linear video
+         underneath so the ad area is fully owned by the game. -->
+    <div class="bg"></div>
+
+    <!-- HUD strip: brand, score, timer, skip. -->
+    <header class="game-head">
+      <div class="brand">YOUR BRAND</div>
+      <div class="score-box"><span class="label">SCORE</span><span id="score">0</span></div>
+      <div class="timer-box"><span class="label">TIME</span><span id="timer">0:30</span></div>
+      <button id="skip" class="skip-btn" tabindex="0" aria-label="Skip ad">SKIP ▶</button>
+    </header>
+
+    <!-- Game field — falling items + player live here. -->
+    <div id="field" class="field">
+      <div id="player" class="player">🧺</div>
+    </div>
+
+    <!-- Instruction strip at the bottom. Fades after first input. -->
+    <footer id="hint" class="hint-strip">
+      <span><span class="key">◀ ▶</span> Move basket</span>
+      <span><span class="key">OK</span> Start</span>
+      <span><span class="key">BACK</span> Skip</span>
+    </footer>
+
+    <!-- End-of-round overlay. Hidden until time runs out. -->
+    <div id="endcard" class="endcard hidden">
+      <h1 id="end-title">Time's up!</h1>
+      <p>You scored <span id="end-score">0</span> points</p>
+      <p class="end-cta">Returning you to your show…</p>
+    </div>
   </div>
 
-  <!-- Debug HUD. Visible by default; pass ?debug=0 to suppress. -->
+  <!-- Debug HUD. Default ON. ?debug=0 to suppress. -->
   <div id="hud" class="hud">
     <div class="hud-head">
       <span class="hud-title">SIMID DEBUG</span>
@@ -55,6 +63,7 @@
 
   <script src="hud.js"></script>
   <script src="simid-protocol.js"></script>
+  <script src="game.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

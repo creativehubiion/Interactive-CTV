@@ -1,8 +1,11 @@
 /* TV-safe layout. Designed for 1920x1080. */
 :root {
-  --accent: #ffd84d;
-  --text:   #ffffff;
-  --focus:  #ffd84d;
+  --accent:   #ffd84d;
+  --accent-2: #ff7a59;
+  --good:     #a8ff7a;
+  --bad:      #ff8a8a;
+  --text:     #ffffff;
+  --focus:    #ffd84d;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -13,43 +16,69 @@ html, body {
   color: var(--text);
   font-family: 'Helvetica Neue', Arial, sans-serif;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-/* Stage hosts the game iframe. Hidden until startCreative arrives;
-   IMA will keep the SIMID iframe display:none until we resolve init,
-   but we still gate our local UI on the start signal. */
+/* Stage shows once startCreative arrives. */
 .stage {
   position: fixed; inset: 0;
   display: none;
-  background: #000;
   opacity: 0;
-  transition: opacity 200ms ease;
+  transition: opacity 250ms ease;
 }
 .stage.visible { display: block; opacity: 1; }
 
-/* Game iframe — takes the entire SIMID region. The game's own canvas
-   handles its own scaling internally. */
-.game-frame {
+/* Solid opaque background — completely hides the linear video behind. */
+.bg {
   position: absolute; inset: 0;
-  width: 100%; height: 100%;
-  border: 0;
-  background: #000;
+  background:
+    radial-gradient(ellipse at 30% 20%, #2c1f4f 0%, transparent 55%),
+    radial-gradient(ellipse at 75% 80%, #4a1f3a 0%, transparent 60%),
+    linear-gradient(135deg, #0a0d1a 0%, #1a1042 50%, #2a0d33 100%);
   z-index: 1;
 }
 
-/* Skip button — small, top-right, focusable. Stays out of the game's
-   way but always reachable via Back on the remote (which we route to
-   the same skip handler). */
-.skip-btn {
+/* ---- Header strip ------------------------------------------------------- */
+.game-head {
   position: absolute;
-  top: 2vh; right: 2vw;
-  z-index: 10;
+  top: 3vh; left: 4vw; right: 4vw;
+  z-index: 5;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 2vw;
+}
+.brand {
+  font-weight: 800; letter-spacing: 0.2em;
+  font-size: 2.2vh;
+  padding: 1vh 1.5vw;
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  background: rgba(0, 0, 0, 0.25);
+}
+.score-box, .timer-box {
+  display: flex; flex-direction: column; align-items: center;
   padding: 1vh 2vw;
-  font: 600 2.2vh 'Helvetica Neue', Arial, sans-serif;
-  letter-spacing: 0.05em;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 0.6vh;
+  min-width: 10vw;
+}
+.score-box .label, .timer-box .label {
+  font-size: 1.4vh; letter-spacing: 0.2em; opacity: 0.7;
+}
+.score-box span:not(.label), .timer-box span:not(.label) {
+  font-size: 4vh; font-weight: 800; line-height: 1;
+  margin-top: 0.3vh;
+}
+.score-box span:not(.label) { color: var(--good); }
+.timer-box span:not(.label) { color: var(--accent); }
+
+.skip-btn {
+  padding: 1vh 1.6vw;
+  font: 700 2vh 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing: 0.1em;
   color: var(--text);
-  background: rgba(0, 0, 0, 0.55);
-  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.45);
+  border: 2px solid rgba(255, 255, 255, 0.4);
   border-radius: 0.6vh;
   cursor: pointer;
   outline: none;
@@ -58,23 +87,103 @@ html, body {
 .skip-btn:focus,
 .skip-btn.focused {
   border-color: var(--focus);
-  background: rgba(255, 216, 77, 0.15);
-  transform: scale(1.05);
+  background: rgba(255, 216, 77, 0.18);
+  transform: scale(1.06);
   box-shadow: 0 0 3vh rgba(255, 216, 77, 0.4);
 }
+
+/* ---- Game field --------------------------------------------------------- */
+.field {
+  position: absolute;
+  top: 14vh; bottom: 12vh; left: 0; right: 0;
+  z-index: 2;
+  overflow: hidden;
+}
+
+.player {
+  position: absolute;
+  bottom: 2vh;
+  left: 50%;
+  transform: translate3d(-50%, 0, 0);
+  font-size: 12vh;
+  line-height: 1;
+  filter: drop-shadow(0 0.4vh 0.8vh rgba(0, 0, 0, 0.6));
+  transition: transform 80ms ease-out;
+  will-change: transform;
+}
+
+.item {
+  position: absolute;
+  font-size: 7vh;
+  line-height: 1;
+  top: 0;
+  filter: drop-shadow(0 0.3vh 0.5vh rgba(0, 0, 0, 0.5));
+  will-change: transform;
+}
+
+.score-burst {
+  position: absolute;
+  pointer-events: none;
+  font-weight: 800;
+  font-size: 4vh;
+  animation: burst 700ms ease-out forwards;
+  text-shadow: 0 0 1.5vh rgba(0, 0, 0, 0.9);
+}
+.score-burst.good { color: var(--good); }
+.score-burst.bad  { color: var(--bad); }
+@keyframes burst {
+  0%   { opacity: 1; transform: translate(-50%, 0)     scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -8vh)  scale(1.4); }
+}
+
+/* ---- Hint strip --------------------------------------------------------- */
+.hint-strip {
+  position: absolute;
+  bottom: 3vh; left: 4vw; right: 4vw;
+  z-index: 5;
+  display: flex; gap: 4vw; justify-content: center;
+  font-size: 2vh; opacity: 0.8;
+  transition: opacity 400ms ease;
+}
+.hint-strip.faded { opacity: 0.15; }
+.key {
+  display: inline-block;
+  padding: 0.4vh 1vw;
+  margin-right: 0.6vw;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 0.4vh;
+  font-weight: 700;
+}
+
+/* ---- End-of-round card -------------------------------------------------- */
+.endcard {
+  position: absolute; inset: 0;
+  z-index: 8;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: rgba(10, 13, 26, 0.92);
+  text-align: center;
+  gap: 3vh;
+  padding: 8vh;
+}
+.endcard.hidden { display: none; }
+.endcard h1 { font-size: 8vh; color: var(--accent); }
+.endcard p  { font-size: 3vh; opacity: 0.9; }
+.endcard #end-score { color: var(--good); font-weight: 800; font-size: 4vh; margin: 0 0.4vw; }
+.endcard .end-cta { opacity: 0.7; font-size: 2.2vh; margin-top: 2vh; }
 
 /* ---- Debug HUD ---------------------------------------------------------- */
 .hud {
   position: fixed;
   right: 1vw; top: 1vh;
-  width: 32vw; max-width: 640px;
-  max-height: 40vh;
+  width: 28vw; max-width: 580px;
+  max-height: 36vh;
   background: rgba(0, 0, 0, 0.78);
   color: #c8ffb9;
   border: 1px solid #3a5a2a;
   border-radius: 0.6vh;
   font-family: 'Consolas', 'Courier New', monospace;
-  font-size: 1.5vh;
+  font-size: 1.3vh;
   line-height: 1.35;
   z-index: 99999;
   display: none;
@@ -84,17 +193,17 @@ html, body {
 .hud.visible { display: flex; }
 .hud-head {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 0.6vh 1vw;
+  padding: 0.5vh 0.8vw;
   background: #1a3010;
   color: #d8ffd0;
   border-bottom: 1px solid #3a5a2a;
 }
-.hud-title { font-weight: 700; letter-spacing: 0.1em; font-size: 1.4vh; }
-.hud-meta  { opacity: 0.85; font-size: 1.3vh; }
+.hud-title { font-weight: 700; letter-spacing: 0.1em; font-size: 1.2vh; }
+.hud-meta  { opacity: 0.85; font-size: 1.1vh; }
 .hud-body {
   flex: 1; overflow: hidden;
-  padding: 0.6vh 1vw;
-  font-size: 1.4vh;
+  padding: 0.4vh 0.8vw;
+  font-size: 1.2vh;
 }
 .hud-row { white-space: pre; }
 .hud-row.lc-info  { color: #c8ffb9; }
@@ -102,4 +211,4 @@ html, body {
 .hud-row.lc-focus { color: #9be3ff; }
 .hud-row.lc-msg   { color: #ffd2f0; }
 .hud-row.lc-err   { color: #ff8a8a; }
-.hud-row .ts { opacity: 0.55; margin-right: 0.5vw; }
+.hud-row .ts { opacity: 0.55; margin-right: 0.4vw; }

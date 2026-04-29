@@ -37,10 +37,10 @@
               <ClickTracking><![CDATA[${BASE_URL}/track/click]]></ClickTracking>
             </VideoClicks>
             <MediaFiles>
-              <MediaFile id="mp4-1080p" delivery="progressive" type="video/mp4"
-                         width="1920" height="1080" bitrate="3500"
+              <MediaFile id="mp4-480p" delivery="progressive" type="video/mp4"
+                         width="854" height="480" bitrate="800"
                          scalable="true" maintainAspectRatio="true">
-                <![CDATA[https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4]]>
+                <![CDATA[https://download.blender.org/durian/trailer/sintel_trailer-480p.mp4]]>
               </MediaFile>
               <InteractiveCreativeFile type="text/html" apiFramework="SIMID" variableDuration="true">
                 <![CDATA[${BASE_URL}/creative/index.html?debug=1]]>

@@ -29,7 +29,10 @@
       <div class="brand">YOUR BRAND</div>
       <div class="score-box"><span class="label">SCORE</span><span id="score">0</span></div>
       <div class="timer-box"><span class="label">TIME</span><span id="timer">0:30</span></div>
-      <button id="skip" class="skip-btn" tabindex="0" aria-label="Skip ad">SKIP ▶</button>
+      <!-- tabindex="-1": programmatically focusable (Up arrow), but never the
+           default-focus target — otherwise OK on the remote = activate the
+           auto-focused Skip = instant skip out of the ad. -->
+      <button id="skip" class="skip-btn" tabindex="-1" aria-label="Skip ad">SKIP ▶</button>
     </header>
 
     <!-- Game field — falling items + player live here. -->

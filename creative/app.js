@@ -88,8 +88,11 @@
   function onStart() {
     if (started) return;
     started = true;
-    log('Player:startCreative — pausing linear, starting game');
+    log('Player:startCreative — pausing linear, muting, starting game');
+    // Pause + mute the linear. Pause alone doesn't reliably stop audio
+    // on every IMA build; pairing with a 0-volume change is bulletproof.
     simid.requestPause().catch(() => {});
+    simid.changeVolume(0, true).catch(() => {});
     showStage();
     armInactivity();
     armHardCap();
@@ -138,6 +141,8 @@
     stage.classList.remove('visible');
     stage.setAttribute('aria-hidden', 'true');
     log(`Teardown: ${reason}`);
+    // Restore audio so the next ad in the pod isn't muted.
+    simid.changeVolume(1, false).catch(() => {});
     simid.requestPlay().catch(() => {});
     simid.requestStop(reason).catch(() => {});
   }

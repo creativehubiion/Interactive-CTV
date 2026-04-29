@@ -188,6 +188,17 @@
     fatalError(reason)    { return this.send(CreativeMessage.FATAL_ERROR,   { reason }); }
     log(msg)              { return this.send(CreativeMessage.LOG,           { message: msg }); }
 
+    /**
+     * Tell the player to silence the linear video. Some IMA builds keep
+     * linear audio routing alive even after Creative:requestPause — sending
+     * volume:0 + muted:true is the belt-and-braces way to kill it. Restore
+     * with changeVolume(1, false) before requestStop so the next ad in the
+     * pod isn't unintentionally muted.
+     */
+    changeVolume(volume = 0, muted = true) {
+      return this.send('SIMID:Creative:requestChangeVolume', { volume, muted });
+    }
+
     /** Fire a tracking macro defined in the VAST tag. */
     reportTracking(eventName, params)  {
       return this.send(CreativeMessage.REPORT_TRACKING, { eventName, params });

@@ -16,8 +16,10 @@
 (function (global) {
   'use strict';
 
+  // HUD is on by default. Disable with ?debug=0 once you've verified the
+  // pipeline end-to-end and you want the iframe overlay to be production-clean.
   const params = new URLSearchParams(location.search);
-  const forced = params.get('debug') === '1';
+  const forced = params.get('debug') !== '0';
 
   const hudEl   = document.getElementById('hud');
   const bodyEl  = document.getElementById('hud-body');

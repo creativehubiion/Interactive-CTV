@@ -11,7 +11,12 @@
 (function (global) {
   'use strict';
 
-  const PROTOCOL = 'SIMID';
+  // The IAB reference implementation tags outgoing messages with
+  // `protocol: "SIMID:1.1"`. Some players send bare `"SIMID"`. Accept either
+  // — match anything that starts with "SIMID".
+  const PROTOCOL_OUT = 'SIMID:1.1';
+  const isSimidEnvelope = (envelope) =>
+    envelope && typeof envelope.protocol === 'string' && envelope.protocol.indexOf('SIMID') === 0;
 
   const PlayerMessage = {
     INIT:                 'Player:init',
@@ -99,7 +104,7 @@
     send(type, args = {}) {
       const messageId = this._nextMessageId++;
       const envelope = {
-        protocol: PROTOCOL,
+        protocol: PROTOCOL_OUT,
         sessionId: this._sessionId,
         messageId,
         type,
@@ -161,7 +166,7 @@
       if (typeof envelope === 'string') {
         try { envelope = JSON.parse(envelope); } catch { return; }
       }
-      if (!envelope || envelope.protocol !== PROTOCOL) return;
+      if (!isSimidEnvelope(envelope)) return;
 
       const { type, messageId, args } = envelope;
 
@@ -182,7 +187,7 @@
 
     _reply(originalMsg, success, value) {
       const replyEnvelope = {
-        protocol: PROTOCOL,
+        protocol: PROTOCOL_OUT,
         sessionId: this._sessionId,
         messageId: this._nextMessageId++,
         type: success ? 'resolve' : 'reject',
@@ -197,4 +202,5 @@
 
   global.SimidCreative   = SimidCreative;
   global.SimidMessages   = { Player: PlayerMessage, Creative: CreativeMessage, Media: MediaMessage };
+  global.SimidProtocolOut = PROTOCOL_OUT;
 })(window);

@@ -106,7 +106,7 @@
     if (forced) {
       try {
         const obj = typeof data === 'string' ? JSON.parse(data) : data;
-        if (obj && obj.protocol === 'SIMID') {
+        if (obj && typeof obj.protocol === 'string' && obj.protocol.indexOf('SIMID') === 0) {
           add('msg', `→ ${obj.type} #${obj.messageId}` + (obj.args && Object.keys(obj.args).length ? ' ' + summarize(obj.args) : ''));
         }
       } catch { /* not JSON */ }
@@ -120,7 +120,7 @@
     if (typeof envelope === 'string') {
       try { envelope = JSON.parse(envelope); } catch { return; }
     }
-    if (envelope && envelope.protocol === 'SIMID') {
+    if (envelope && typeof envelope.protocol === 'string' && envelope.protocol.indexOf('SIMID') === 0) {
       add('msg', `← ${envelope.type} #${envelope.messageId}` + (envelope.args && Object.keys(envelope.args).length ? ' ' + summarize(envelope.args) : ''));
       if (envelope.type === 'Player:init')           setMeta('init received');
       if (envelope.type === 'Player:startCreative')  setMeta('startCreative — active');

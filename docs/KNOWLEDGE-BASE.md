@@ -1194,6 +1194,39 @@ hardcoded at the SSP level — there's no per-supply UI override.
 **Confirmed conclusion (Scenario B)**: the supply team cannot fix the
 api gap from their current admin UI. The field doesn't exist to set.
 
+### Important nuance — who SHOULD declare api per OpenRTB spec
+
+Per OpenRTB 2.6, `imp.video.api` is supposed to be a **capability
+declaration from the publisher's player**, not a supply-side config.
+Only the player knows for certain what its SDK can render.
+
+URL-based integrations like Limelight's `vastm/<tagid>?...` endpoint
+break this pattern — there's no slot in a URL for the publisher's IMA
+SDK to declare its capabilities. So *somebody* on the SSP side has to
+either:
+
+| Approach | Tradeoff |
+|---|---|
+| Supply team manual config | Burdens team with knowledge they often don't have. Publishers don't know their own SDK details, apps update without telling. Error-prone. |
+| **Platform-based SSP inference** | Scales without supply-team work. Accepts ~5% edge-case errors. |
+| URL parameter (`&api=...`) | Spec-correct but most publishers won't populate it. |
+| `display_manager` SDK identifier | Industry standard but only works if publishers' SDKs report it. Currently empty in iion's URLs. |
+
+**Real production SSPs use a layered approach**: default per-platform
+inference as baseline (covers ~95% correctly), with optional
+supply-team / URL / display-manager overrides for the rest.
+
+So the better-scoped engineering ask for Limelight is:
+
+> "Add platform-based default `imp.video.api` inference to outbound
+> bid requests. Fire TV / Android TV / Google TV → `[7, 8]` by default.
+> Roku, Apple TV → empty. Plus optionally a per-supply override and
+> a URL parameter for publishers who confirm/contradict the default."
+
+This avoids putting the supply team in the position of having to know
+every publisher's SDK capabilities (a question they often can't answer
+reliably).
+
 ### Sample bid request (Fire TV Stick 4K Max — same hardware as our test device)
 
 ```json

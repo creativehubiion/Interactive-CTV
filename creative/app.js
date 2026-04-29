@@ -151,6 +151,11 @@
     if (!started || dismissed) return;
     pokeInactivity();
     fadeHintOnce();
+    // Unlock the audio context on the first remote keypress, in case the
+    // browser left it suspended at SIMID start (some Fire TV WebView builds
+    // require a user gesture before audio is allowed even with the
+    // "media playback doesn't require gesture" flag set).
+    if (window.GameSfx) window.GameSfx.unlock();
 
     if (matchKey(e, KEY.BACK)) {
       simid.reportTracking('skip').catch(() => {});

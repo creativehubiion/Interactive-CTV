@@ -19,14 +19,74 @@
   'use strict';
 
   const ROUND_MS  = 30_000;
-  const SPAWN_MIN_MS = 600;
-  const SPAWN_MAX_MS = 1100;
-  const FALL_MIN_PX_PER_S = 320;
-  const FALL_MAX_PX_PER_S = 520;
+  const SPAWN_MIN_MS = 850;
+  const SPAWN_MAX_MS = 1500;
+  const FALL_MIN_PX_PER_S = 180;
+  const FALL_MAX_PX_PER_S = 290;
   const PLAYER_SPEED_PX_PER_S = 900;
   const GOOD_ITEMS = ['🍎', '🍓', '🍇', '🍌', '🥝', '🍑', '🍊'];
   const BAD_ITEMS  = ['💣', '🪨'];
   const BAD_PROB   = 0.18;
+
+  // ---- Synthesized SFX -----------------------------------------------------
+  // Zero-asset sound: built from oscillators on the fly. No network, no
+  // autoplay-policy issues once any user gesture has touched the page.
+  class SoundFx {
+    constructor() { this.ctx = null; this.master = null; this.muted = false; }
+    _ensure() {
+      if (this.ctx) return this.ctx;
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      try {
+        this.ctx = new Ctx();
+        this.master = this.ctx.createGain();
+        this.master.gain.value = 0.5;
+        this.master.connect(this.ctx.destination);
+      } catch { return null; }
+      return this.ctx;
+    }
+    /** Call from the first user gesture. Some browsers lock the AudioContext
+     *  in a 'suspended' state until then. */
+    unlock() {
+      const c = this._ensure();
+      if (c && c.state === 'suspended') { try { c.resume(); } catch {} }
+    }
+    _tone({ freq, type = 'sine', duration = 150, volume = 0.25, slideSemitones = 0, attack = 0.005 }) {
+      const ctx = this._ensure();
+      if (!ctx || this.muted) return;
+      const t0 = ctx.currentTime;
+      const t1 = t0 + duration / 1000;
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, t0);
+      if (slideSemitones) {
+        const target = freq * Math.pow(2, slideSemitones / 12);
+        osc.frequency.exponentialRampToValueAtTime(Math.max(20, target), t1);
+      }
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(volume, t0 + attack);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t1);
+      osc.connect(gain).connect(this.master);
+      osc.start(t0);
+      osc.stop(t1 + 0.02);
+    }
+    good()  { this._tone({ freq: 660, type: 'triangle', duration: 110, volume: 0.30, slideSemitones:  7 }); }
+    bad()   { this._tone({ freq: 220, type: 'square',   duration: 200, volume: 0.22, slideSemitones: -7 }); }
+    move()  { /* intentionally silent — would be annoying on hold-to-move */ }
+    start() {
+      this._tone({ freq: 440, type: 'sine', duration: 90,  volume: 0.22 });
+      setTimeout(() => this._tone({ freq: 660, type: 'sine', duration: 90,  volume: 0.22 }), 100);
+      setTimeout(() => this._tone({ freq: 880, type: 'sine', duration: 140, volume: 0.22 }), 200);
+    }
+    end() {
+      this._tone({ freq: 880, type: 'triangle', duration: 180, volume: 0.28 });
+      setTimeout(() => this._tone({ freq: 660, type: 'triangle', duration: 180, volume: 0.28 }), 180);
+      setTimeout(() => this._tone({ freq: 440, type: 'triangle', duration: 380, volume: 0.28 }), 360);
+    }
+    tick()  { this._tone({ freq: 1200, type: 'sine', duration: 40, volume: 0.10 }); }
+  }
+  global.GameSfx = new SoundFx();
 
   class TinyEmitter {
     constructor() { this._h = {}; }
@@ -76,7 +136,9 @@
       this.lastFrame = this.startedAt;
       this.lastSpawn = this.startedAt;
       this.nextSpawnGap = this._randSpawnGap();
+      this._lastTickSec = 999;
       this.endcard && this.endcard.classList.add('hidden');
+      if (global.GameSfx) global.GameSfx.start();
       requestAnimationFrame(this._loop);
     }
 
@@ -210,6 +272,7 @@
           if (this.score < 0) this.score = 0;
           this._renderScore();
           this._showBurst(it.x, this.fieldH - this.playerH - 10, it.good);
+          if (global.GameSfx) (it.good ? global.GameSfx.good() : global.GameSfx.bad());
           it.el.remove();
           this.items.splice(i, 1);
           continue;
@@ -226,7 +289,7 @@
 
     _end() {
       this.running = false;
-      // Show end card.
+      if (global.GameSfx) global.GameSfx.end();
       if (this.endTitle)    this.endTitle.textContent = "Time's up!";
       if (this.endScoreEl)  this.endScoreEl.textContent = String(this.score);
       if (this.endcard)     this.endcard.classList.remove('hidden');

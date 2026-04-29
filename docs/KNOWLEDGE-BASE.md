@@ -1056,6 +1056,68 @@ builds keep contexts suspended).
 
 ---
 
+## 22a. Limelight SSP — bid request schema doesn't declare SIMID
+
+Confirmed via Limelight's public documentation at
+`limelight.cloud.xwiki.com/xwiki/bin/view/Public/Client%20Documentation/2.%20Frequently%20asked%20questions/Bid%20response%20examples/`
+
+**Their documented bid request `video` schema only includes VPAID api codes**:
+
+```json
+// Limelight's published examples
+"video": {
+  "protocols": [2, 3, 5, 6],   // VAST 2.0/3.0 + wrappers (their docs)
+  "api":       [1, 2]           // VPAID 1.0 + 2.0 ONLY — no OMID, no SIMID
+}
+```
+
+**Live bid requests sampled from production confirm**:
+
+```json
+"video": {
+  "protocols": [1,2,3,7,4,5,6,8],   // VAST 4.x wrappers ARE forwarded
+  // api: completely missing
+}
+```
+
+So Limelight upgraded VAST protocol support at some point but **never
+added the corresponding API codes for OMID (7) or SIMID (8)** to their
+bid request template. The `api` field is silently omitted from outbound
+DSP bid requests, even for inventory where the publisher's player
+declares SIMID support.
+
+### What this means
+
+- **Demand partners can't filter SIMID-capable inventory** via bid stream — no `api: [8]` signal anywhere
+- **iion's own DSP-side filtering** can't use `api` either — must fall back to platform-based inference (`device.os ∈ {Android, Fire OS}`)
+- **This is an SSP integration gap**, not a per-publisher configuration issue
+- **Verified by**: two live bid requests from different platforms (LG webOS + Roku); both had no `api` field despite different publisher integrations
+
+### Two paths forward
+
+**Option 1 — fix Limelight (proper)**: file an internal feature request
+to add `api: [7, 8]` to outbound bid requests via either:
+- Per-publisher capability config (publisher declares in onboarding)
+- Platform-based inference at the SSP layer (Fire TV / Android TV →
+  default to `api: [7, 8]`)
+
+**Option 2 — work around it (interim)**: do platform-based inference at
+the DSP layer, ignoring the missing `api` field:
+
+```pseudocode
+function shouldBidSimidCreative(bidRequest) {
+  if device.os in ('Android', 'Fire OS') &&
+     device.make in ('Amazon', 'Google', 'TCL', 'Sony', ...): return true
+  if device.os in ('Roku OS', 'tvOS'): return false
+  return false  // unknown — bid plain linear to be safe
+}
+```
+
+Use the **DMP funnel** (`simid_init` event ratio per publisher) as
+ground truth for actual rendering rates regardless of bid signals.
+
+---
+
 ## 22. Open items / decisions deferred
 
 These were active topics and should be picked back up when relevant:

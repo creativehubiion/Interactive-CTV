@@ -1101,6 +1101,63 @@ to add `api: [7, 8]` to outbound bid requests via either:
 - Platform-based inference at the SSP layer (Fire TV / Android TV →
   default to `api: [7, 8]`)
 
+### Deeper root cause: it's a publisher-integration gap, not just a schema gap
+
+Verified by inspecting a Fire TV bid request (Fire OS 6.0, AFTMM,
+Chromium 118) — even VPAID api codes are missing, not just SIMID. Why?
+
+**Limelight's publisher-facing endpoint is a VAST URL**:
+`https://ads-2479v.iionads.com/vastm/<tagid>?w=...&h=...&ifa=...&...`
+
+**A VAST URL has no parameter for the publisher's player to declare
+which api frameworks it supports.** So even if Limelight fixed their
+outbound bid request to include `api`, they'd have no data to put there.
+
+This decomposes the problem into two independent fixes:
+
+| Fix | Layer | Effort |
+|---|---|---|
+| Add `&api=7,8` URL param to Limelight's VAST endpoint convention | Publisher → SSP | Spec + IMA SDK config update; backwards-compatible |
+| Add `api` to outbound DSP bid request | SSP → DSP | Already in their schema, just needs to be populated |
+| Shortcut both via platform inference at SSP layer | SSP-internal | One config change: `if device.os ∈ {Android, Fire OS}: api = [7,8]` |
+
+The shortcut (platform inference) is the practical answer because:
+- IMA Android is dominant on Fire TV / Android TV — declaring `[7, 8]` is correct ~95%+ of the time
+- No publisher integration changes needed
+- Fixes the bid-stream signal for demand partners immediately
+
+### Why even VPAID is missing on Fire TV impressions
+
+IMA Android **does not support VPAID at all** — VPAID is HTML5/web-only
+in Google's IMA SDK family. So a Fire TV publisher correctly declares
+"no VPAID". But the absence of OMID (7) and SIMID (8), which Fire TV
+publishers DO support, is the gap.
+
+### Sample bid request (Fire TV Stick 4K Max — same hardware as our test device)
+
+```json
+{
+  "imp": [{
+    "video": {
+      "protocols": [1,2,3,7,4,5,6,8],
+      // api: missing entirely
+      "w": 1920, "h": 1080
+    }
+  }],
+  "device": {
+    "make":  "Amazon",
+    "os":    "Fire OS",
+    "model": "AFTMM",
+    "osv":   "6.0",
+    "ua":    "...AFTMM Build/NS6711; wv...Chrome/118.0.0.0..."
+  }
+}
+```
+
+**Despite the missing `api` field, this impression IS SIMID-renderable.**
+Same hardware + Chromium version as our Fire TV testbed where we proved
+it works. Route via platform inference until the bid stream signal lands.
+
 **Option 2 — work around it (interim)**: do platform-based inference at
 the DSP layer, ignoring the missing `api` field:
 

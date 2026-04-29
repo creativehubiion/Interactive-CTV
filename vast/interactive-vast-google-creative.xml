@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Isolation-test VAST: identical to interactive-vast.xml in every
+  structural way, but the InteractiveCreativeFile points at Google's
+  known-working sample SIMID creative
+  (storage.googleapis.com/interactive-media-ads/ad-tags/simid_assets/
+   sample_simid_compiled.html) instead of our own.
+
+  Purpose: confirm that IMA Android 3.30.3 on the Fire TV actually
+  fetches and renders a SIMID creative referenced by our VAST URL. If
+  this VAST shows Google's "Sample SIMID Survey Ad" overlay on the Fire
+  TV, then the bug is in OUR creative HTML, not the VAST shape, the
+  hosting, the MediaFile, the IMA SDK version, or the host app.
+-->
+<VAST xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="vast.xsd" version="3.0">
+  <Ad id="interactive-ctv-isolation-test">
+    <InLine>
+      <AdSystem>interactive-ctv-ref</AdSystem>
+      <AdTitle>Interactive CTV — isolation test (Google's SIMID creative)</AdTitle>
+      <Description>VAST shape from creativehubiion + Google's reference SIMID HTML. Used to bisect IMA SIMID rendering issues.</Description>
+      <Error>https://creativehubiion.github.io/Interactive-CTV/track/error</Error>
+      <Impression>https://creativehubiion.github.io/Interactive-CTV/track/impression</Impression>
+      <Creatives>
+        <Creative sequence="1">
+          <Linear>
+            <Duration>00:01:55</Duration>
+            <TrackingEvents>
+              <Tracking event="start">https://creativehubiion.github.io/Interactive-CTV/track/start</Tracking>
+              <Tracking event="firstQuartile">https://creativehubiion.github.io/Interactive-CTV/track/q1</Tracking>
+              <Tracking event="midpoint">https://creativehubiion.github.io/Interactive-CTV/track/q2</Tracking>
+              <Tracking event="thirdQuartile">https://creativehubiion.github.io/Interactive-CTV/track/q3</Tracking>
+              <Tracking event="complete">https://creativehubiion.github.io/Interactive-CTV/track/complete</Tracking>
+              <Tracking event="creativeView">https://creativehubiion.github.io/Interactive-CTV/track/creativeView</Tracking>
+            </TrackingEvents>
+            <VideoClicks>
+              <ClickThrough id="ctv-iso">https://creativehubiion.github.io/Interactive-CTV/</ClickThrough>
+            </VideoClicks>
+            <MediaFiles>
+              <MediaFile delivery="progressive" type="video/mp4">
+                https://storage.googleapis.com/interactive-media-ads/media/android.mp4
+              </MediaFile>
+              <InteractiveCreativeFile type="text/html" apiFramework="SIMID" variableDuration="true">
+                https://storage.googleapis.com/interactive-media-ads/ad-tags/simid_assets/sample_simid_compiled.html
+              </InteractiveCreativeFile>
+            </MediaFiles>
+          </Linear>
+        </Creative>
+      </Creatives>
+    </InLine>
+  </Ad>
+</VAST>

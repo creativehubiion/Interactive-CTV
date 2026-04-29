@@ -210,17 +210,24 @@
     }
 
     _showBurst(x, y, isGood) {
+      // Cap concurrent bursts so rapid-fire catches don't pile up animations
+      // (each burst is GPU-composited but still costs a layer).
+      const existing = this.fieldEl.querySelectorAll('.score-burst');
+      if (existing.length >= 3) existing[0].remove();
       const b = document.createElement('div');
       b.className = 'score-burst ' + (isGood ? 'good' : 'bad');
       b.textContent = isGood ? '+1' : '-1';
       b.style.left = x + 'px';
       b.style.top  = y + 'px';
       this.fieldEl.appendChild(b);
-      setTimeout(() => b.remove(), 700);
+      setTimeout(() => b.remove(), 620);
     }
 
     _loop(now) {
       if (!this.running) return;
+      // Clamp dt so a long pause (off-screen, GC, debugger, etc.) doesn't
+      // teleport items past the player. Also drives a stable simulation
+      // even when the WebView drops frames below 30fps.
       const dt = Math.min(0.05, (now - this.lastFrame) / 1000);
       this.lastFrame = now;
 

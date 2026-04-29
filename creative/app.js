@@ -41,10 +41,10 @@
   const HARD_CAP_MS   = 180_000;
 
   const simid = new SimidCreative();
-  let started   = false;
   let dismissed = false;
   let inactivityTimer = null;
   let hardCapTimer    = null;
+  let mutedAlready = false;
 
   // -------- DOM ------------------------------------------------------------
   const stage      = document.getElementById('stage');
@@ -73,38 +73,37 @@
   });
 
   // -------- SIMID lifecycle ------------------------------------------------
-  simid.addEventListener('init',    () => log('Player:init handled'));
-  simid.addEventListener('start',   onStart);
+  // Following Google's reference creative: the GAME renders unconditionally
+  // on page load (showStage + game.start() below). SIMID handshake happens
+  // in parallel but does NOT gate the UI. IMA already keeps the iframe
+  // hidden until init resolves; once it un-hides, the user sees an
+  // already-running game. This eliminates the "race between start event
+  // and game init" failure mode that broke the previous build.
+  simid.addEventListener('init',    () => { log('Player:init handled'); muteLinear(); });
+  simid.addEventListener('start',   () => { log('Player:startCreative'); muteLinear(); simid.reportTracking('creativeView').catch(() => {}); });
   simid.addEventListener('stopped', () => teardown('player-stopped'));
   simid.addEventListener('skipped', () => teardown('player-skipped'));
 
-  setTimeout(() => {
-    if (!started) {
-      log('No startCreative in 2 s — falling back to auto-start');
-      onStart();
-    }
-  }, 2000);
-
-  function onStart() {
-    if (started) return;
-    started = true;
-    log('startCreative → pause + mute + game');
-    // Belt-and-braces audio kill: send pause AND volume change AND repeat
-    // both at small staggers in case IMA's pause-vs-volume code paths
-    // race or one is silently ignored on this build.
+  function muteLinear() {
+    if (mutedAlready) return;
+    mutedAlready = true;
+    log('muting linear');
+    // Send pause + volume change at three staggers — covers IMA builds
+    // where one or the other is silently ignored.
     simid.requestPause().catch(() => {});
     simid.changeVolume(0, true).catch(() => {});
     setTimeout(() => { simid.requestPause().catch(() => {}); simid.changeVolume(0, true).catch(() => {}); }, 250);
     setTimeout(() => { simid.requestPause().catch(() => {}); simid.changeVolume(0, true).catch(() => {}); }, 1000);
+  }
 
+  // Render and start the game immediately. No waiting for SIMID. IMA
+  // controls iframe visibility per spec; we just keep our content alive.
+  function bootGame() {
+    log('boot — showing stage + starting game');
     showStage();
     armInactivity();
     armHardCap();
-    simid.reportTracking('creativeView').catch(() => {});
-
-    // Defer game start one frame so layout/measure is correct.
     requestAnimationFrame(() => {
-      log('game.start() running');
       try {
         game.start();
         log('game running');
@@ -112,6 +111,12 @@
         log('game.start FAILED: ' + (e && e.message));
       }
     });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootGame, { once: true });
+  } else {
+    bootGame();
   }
 
   // -------- Stage / Focus --------------------------------------------------
@@ -169,7 +174,7 @@
   }
 
   document.addEventListener('keydown', (e) => {
-    if (!started || dismissed) return;
+    if (dismissed) return;
     pokeInactivity();
     fadeHintOnce();
     // Unlock the audio context on the first remote keypress, in case the
@@ -221,7 +226,7 @@
   });
 
   document.addEventListener('keyup', (e) => {
-    if (!started || dismissed) return;
+    if (dismissed) return;
     if (matchKey(e, KEY.LEFT))  game.handleKey('left',  false);
     if (matchKey(e, KEY.RIGHT)) game.handleKey('right', false);
   });

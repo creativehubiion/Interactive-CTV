@@ -96,21 +96,39 @@
     setTimeout(() => { simid.requestPause().catch(() => {}); simid.changeVolume(0, true).catch(() => {}); }, 1000);
   }
 
-  // Render and start the game immediately. No waiting for SIMID. IMA
-  // controls iframe visibility per spec; we just keep our content alive.
+  // Render and start the game. No SIMID gating, but we DO wait for the
+  // iframe to actually have layout dimensions before measuring. If we
+  // measure while IMA still has the iframe hidden (display:none /
+  // visibility:hidden), getBoundingClientRect returns 0×0 and the game
+  // boots with fieldW=0 — basket clamped to one spot, fruits spawn at
+  // negative coords, looks frozen. Poll RAF until the field has real
+  // dimensions, then start.
   function bootGame() {
-    log('boot — showing stage + starting game');
+    log('boot — showing stage');
     showStage();
     armInactivity();
     armHardCap();
-    requestAnimationFrame(() => {
-      try {
-        game.start();
-        log('game running');
-      } catch (e) {
-        log('game.start FAILED: ' + (e && e.message));
+
+    let attempts = 0;
+    function attemptStart() {
+      const rect = fieldEl.getBoundingClientRect();
+      if (rect.width > 50 && rect.height > 50) {
+        try {
+          game.start();
+          log(`game running · ${Math.round(rect.width)}x${Math.round(rect.height)}`);
+        } catch (e) {
+          log('game.start FAILED: ' + (e && e.message));
+        }
+        return;
       }
-    });
+      attempts++;
+      if (attempts > 600) {            // ~10 s @ 60 fps; give up cleanly
+        log('field never got dimensions; aborting');
+        return;
+      }
+      requestAnimationFrame(attemptStart);
+    }
+    requestAnimationFrame(attemptStart);
   }
 
   if (document.readyState === 'loading') {

@@ -231,6 +231,22 @@
       const dt = Math.min(0.05, (now - this.lastFrame) / 1000);
       this.lastFrame = now;
 
+      // Re-measure each frame. The IMA iframe can be resized or hidden /
+      // shown by the player mid-round (Fire TV WebView), and stale
+      // dimensions are exactly the failure mode where everything goes
+      // frozen except the timer.
+      const rect = this.fieldEl.getBoundingClientRect();
+      if (rect.width > 50 && (rect.width !== this.fieldW || rect.height !== this.fieldH)) {
+        const oldW = this.fieldW;
+        this.fieldW = rect.width;
+        this.fieldH = rect.height;
+        // If we'd been running with a stale width, snap player back to
+        // a sensible position so the basket isn't stuck at the edge.
+        if (oldW === 0 || this.playerX < 0 || this.playerX > this.fieldW) {
+          this.playerX = this.fieldW / 2;
+        }
+      }
+
       // Timer
       const elapsed = now - this.startedAt;
       const remainingMs = Math.max(0, ROUND_MS - elapsed);

@@ -122,6 +122,7 @@
       this.nextSpawnGap = SPAWN_MIN_MS;
       this.startedAt = 0;
       this.holdDir = 0;         // -1 left, 0 idle, +1 right
+      this._sawInput = false;
 
       this._loop = this._loop.bind(this);
     }
@@ -154,6 +155,10 @@
     handleKey(dir, pressed) {
       // dir: 'left' | 'right'. pressed=true on keydown, false on keyup.
       if (!this.running) return;
+      if (pressed && !this._sawInput) {
+        this._sawInput = true;
+        this.events.emit('first_input');
+      }
       if (dir === 'left')  this.holdDir = pressed ? -1 : (this.holdDir === -1 ? 0 : this.holdDir);
       if (dir === 'right') this.holdDir = pressed ? +1 : (this.holdDir === +1 ? 0 : this.holdDir);
     }
@@ -300,6 +305,7 @@
           this._renderScore();
           this._showBurst(it.x, this.fieldH - this.playerH - 10, it.good);
           if (global.GameSfx) (it.good ? global.GameSfx.good() : global.GameSfx.bad());
+          this.events.emit('catch', { good: it.good, glyph: it.el.textContent, score: this.score });
           it.el.remove();
           this.items.splice(i, 1);
           continue;

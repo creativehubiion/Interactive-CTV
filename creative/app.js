@@ -41,6 +41,9 @@
   const HARD_CAP_MS   = 180_000;
 
   const simid = new SimidCreative();
+  // Tracker initially built without env data; reconfigured once Player:init
+  // arrives and we have access to AdParameters from the VAST tag.
+  let tracker = new Tracker({ context: { creative_id: 'fruit-catch-v1', creative_version: '0.9' } });
   let started   = false;
   let dismissed = false;
   let inactivityTimer = null;
@@ -69,8 +72,19 @@
   game.events.on('end', (score) => {
     log('Round ended — score=' + score);
     simid.reportTracking('gameComplete', { score }).catch(() => {});
+    tracker.event('game_complete', { score });
     // Brief pause so the user reads the end card, then tear down.
     setTimeout(() => teardown('game-complete'), 2000);
+  });
+
+  // Per-event game telemetry.
+  game.events.on('catch', (info) => {
+    tracker.event(info.good ? 'fruit_catch' : 'bomb_catch', {
+      glyph: info.glyph, score: info.score,
+    });
+  });
+  game.events.on('first_input', () => {
+    tracker.event('first_input');
   });
 
   // -------- SIMID lifecycle ------------------------------------------------
@@ -80,7 +94,24 @@
   // DOMContentLoaded time, so getBoundingClientRect returns 0×0 and the
   // game boots with stale measurements. Reverted to the gated approach;
   // game.js also re-measures each frame as a belt-and-braces backup.
-  simid.addEventListener('init',    () => log('Player:init handled'));
+  simid.addEventListener('init', (env, creativeData) => {
+    log('Player:init handled');
+    // Re-create tracker with env-supplied AdParameters merged in.
+    const adParams = simid.parseAdParameters();
+    tracker = Tracker.fromEnvironment(adParams);
+    tracker.setContext({
+      creative_id: 'fruit-catch-v1',
+      creative_version: '0.9',
+      // Push useful environment context the DMP will want.
+      video_w:  env && env.videoDimensions    && env.videoDimensions.width,
+      video_h:  env && env.videoDimensions    && env.videoDimensions.height,
+      ad_w:     env && env.creativeDimensions && env.creativeDimensions.width,
+      ad_h:     env && env.creativeDimensions && env.creativeDimensions.height,
+      version:  env && env.version,
+      muted:    env && env.muted,
+    });
+    tracker.event('simid_init');
+  });
   simid.addEventListener('start',   onStart);
   simid.addEventListener('stopped', () => teardown('player-stopped'));
   simid.addEventListener('skipped', () => teardown('player-skipped'));
@@ -98,6 +129,7 @@
     if (started) return;
     started = true;
     log('startCreative → pause + mute + game');
+    tracker.event('simid_start');
     muteLinear();
     showStage();
     armInactivity();
@@ -106,9 +138,11 @@
     requestAnimationFrame(() => {
       try {
         game.start();
+        tracker.event('game_start');
         log('game running');
       } catch (e) {
         log('game.start FAILED: ' + (e && e.message));
+        tracker.event('game_start_error', { message: e && e.message });
       }
     });
   }
@@ -139,6 +173,7 @@
     clearTimeout(inactivityTimer);
     inactivityTimer = setTimeout(() => {
       simid.reportTracking('inactivity').catch(() => {});
+      tracker.event('inactivity_timeout');
       log(`Inactivity ${INACTIVITY_MS} ms — auto-skip`);
       teardown('inactivity');
     }, INACTIVITY_MS);
@@ -148,6 +183,7 @@
     clearTimeout(hardCapTimer);
     hardCapTimer = setTimeout(() => {
       simid.reportTracking('hardCap').catch(() => {});
+      tracker.event('hard_cap');
       log(`Hard cap ${HARD_CAP_MS} ms — force exit`);
       teardown('hard-cap');
     }, HARD_CAP_MS);
@@ -164,6 +200,7 @@
     stage.classList.remove('visible');
     stage.setAttribute('aria-hidden', 'true');
     log(`Teardown: ${reason}`);
+    tracker.event('teardown', { reason });
     // Restore audio so the next ad in the pod isn't muted.
     simid.changeVolume(1, false).catch(() => {});
     // Use Creative:requestSkip — Google's reference uses this for

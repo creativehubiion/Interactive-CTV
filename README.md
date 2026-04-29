@@ -11,6 +11,12 @@ implements it (which differs from the spec text in important ways), the
 exact VAST shape that works, every bug we hit and how we fixed it, and
 the Fire TV testbed recipe. Don't relearn what's in there.
 
+**🎯 For the SIMID inventory signaling conclusions** (Limelight bid request
+gap, why per-tag config doesn't scale, the platform-inference fix):
+[`docs/SIMID-Signaling-Conclusions.md`](docs/SIMID-Signaling-Conclusions.md)
+— one-page summary with the final-form Limelight engineering ticket
+text ready to copy-paste.
+
 **Live URLs:**
 - Production VAST tag: `https://creativehubiion.github.io/Interactive-CTV/vast/interactive-vast.xml`
 - Standalone test host (no IMA): `https://creativehubiion.github.io/Interactive-CTV/test/simid-test-host.html`

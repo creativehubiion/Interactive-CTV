@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Source template for interactive-vast.xml. Run `npm run build:vast` (or
+  manually replace https://creativehubiion.github.io/Interactive-CTV) to produce a deployable copy at the path the
+  IMA SDK fetches.
+
+  https://creativehubiion.github.io/Interactive-CTV should be the public origin where this repo is served, e.g.:
+    https://creativehubiion.github.io/Interactive-CTV
+-->
+<VAST version="4.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Ad id="interactive-ctv-demo-1">
+    <InLine>
+      <AdSystem version="1.0">interactive-ctv-ref</AdSystem>
+      <AdTitle><![CDATA[Interactive CTV Demo — Pick Your Vibe]]></AdTitle>
+      <Description><![CDATA[D-pad-driven SIMID interactive overlay over a 30-second linear video.]]></Description>
+
+      <Impression><![CDATA[https://creativehubiion.github.io/Interactive-CTV/track/impression?ts=[TIMESTAMP]&cb=[CACHEBUSTING]]]></Impression>
+      <Error><![CDATA[https://creativehubiion.github.io/Interactive-CTV/track/error?code=[ERRORCODE]]]></Error>
+
+      <Creatives>
+        <Creative id="creative-1" sequence="1">
+          <Linear>
+            <Duration>00:00:30</Duration>
+            <TrackingEvents>
+              <Tracking event="start"><![CDATA[https://creativehubiion.github.io/Interactive-CTV/track/start]]></Tracking>
+              <Tracking event="firstQuartile"><![CDATA[https://creativehubiion.github.io/Interactive-CTV/track/q1]]></Tracking>
+              <Tracking event="midpoint"><![CDATA[https://creativehubiion.github.io/Interactive-CTV/track/q2]]></Tracking>
+              <Tracking event="thirdQuartile"><![CDATA[https://creativehubiion.github.io/Interactive-CTV/track/q3]]></Tracking>
+              <Tracking event="complete"><![CDATA[https://creativehubiion.github.io/Interactive-CTV/track/complete]]></Tracking>
+              <Tracking event="skip"><![CDATA[https://creativehubiion.github.io/Interactive-CTV/track/skip]]></Tracking>
+              <Tracking event="creativeView"><![CDATA[https://creativehubiion.github.io/Interactive-CTV/track/creativeView]]></Tracking>
+              <Tracking event="select"><![CDATA[https://creativehubiion.github.io/Interactive-CTV/track/select]]></Tracking>
+              <Tracking event="timeout"><![CDATA[https://creativehubiion.github.io/Interactive-CTV/track/timeout]]></Tracking>
+            </TrackingEvents>
+            <VideoClicks>
+              <ClickThrough><![CDATA[https://creativehubiion.github.io/Interactive-CTV/]]></ClickThrough>
+              <ClickTracking><![CDATA[https://creativehubiion.github.io/Interactive-CTV/track/click]]></ClickTracking>
+            </VideoClicks>
+            <MediaFiles>
+              <MediaFile id="mp4-1080p" delivery="progressive" type="video/mp4"
+                         width="1920" height="1080" bitrate="3500"
+                         scalable="true" maintainAspectRatio="true">
+                <![CDATA[https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4]]>
+              </MediaFile>
+              <InteractiveCreativeFile type="text/html" apiFramework="SIMID" variableDuration="true">
+                <![CDATA[https://creativehubiion.github.io/Interactive-CTV/creative/index.html?debug=1]]>
+              </InteractiveCreativeFile>
+            </MediaFiles>
+            <AdParameters xmlns="http://www.iab.com/VAST"><![CDATA[
+              {"version":"0.1.0","theme":"default","brand":"YOUR BRAND","debug":true}
+            ]]></AdParameters>
+          </Linear>
+        </Creative>
+      </Creatives>
+    </InLine>
+  </Ad>
+</VAST>

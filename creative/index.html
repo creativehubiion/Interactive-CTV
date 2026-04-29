@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=1920, initial-scale=1, user-scalable=no" />
+  <title>Interactive CTV Ad</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="stage" class="stage" aria-hidden="true">
+    <div class="brand-strip">
+      <div class="brand-logo">YOUR BRAND</div>
+      <div class="prompt">Use the remote to choose</div>
+    </div>
+
+    <h1 class="headline">What sounds good tonight?</h1>
+
+    <div class="grid" id="grid">
+      <button class="tile" tabindex="0" data-id="movies" data-row="0" data-col="0" autofocus>
+        <span class="tile-icon">🎬</span>
+        <span class="tile-label">Movies</span>
+      </button>
+      <button class="tile" tabindex="0" data-id="sports" data-row="0" data-col="1">
+        <span class="tile-icon">🏀</span>
+        <span class="tile-label">Sports</span>
+      </button>
+      <button class="tile" tabindex="0" data-id="music"  data-row="1" data-col="0">
+        <span class="tile-icon">🎵</span>
+        <span class="tile-label">Music</span>
+      </button>
+      <button class="tile" tabindex="0" data-id="games"  data-row="1" data-col="1">
+        <span class="tile-icon">🎮</span>
+        <span class="tile-label">Games</span>
+      </button>
+    </div>
+
+    <div class="footer">
+      <span class="hint"><span class="key">◀ ▶ ▲ ▼</span> Navigate</span>
+      <span class="hint"><span class="key">OK</span> Select</span>
+      <span class="hint"><span class="key">BACK</span> Skip</span>
+    </div>
+
+    <div id="confirm" class="confirm hidden">
+      <h2 id="confirm-title">Got it.</h2>
+      <p id="confirm-body">Returning you to your show…</p>
+    </div>
+  </div>
+
+  <!--
+    Debug HUD. Visible whenever the URL contains ?debug=1 (default ON for the
+    sample VAST). Shows SIMID lifecycle, postMessage I/O, key events, and
+    focus changes so you can verify Fire TV WebView behavior at a glance.
+  -->
+  <div id="hud" class="hud">
+    <div class="hud-head">
+      <span class="hud-title">SIMID DEBUG</span>
+      <span class="hud-meta" id="hud-meta">booting…</span>
+    </div>
+    <div class="hud-body" id="hud-body"></div>
+  </div>
+
+  <script src="hud.js"></script>
+  <script src="simid-protocol.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

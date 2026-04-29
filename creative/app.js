@@ -41,6 +41,7 @@
   const HARD_CAP_MS   = 180_000;
 
   const simid = new SimidCreative();
+  let started   = false;
   let dismissed = false;
   let inactivityTimer = null;
   let hardCapTimer    = null;
@@ -73,68 +74,54 @@
   });
 
   // -------- SIMID lifecycle ------------------------------------------------
-  // Following Google's reference creative: the GAME renders unconditionally
-  // on page load (showStage + game.start() below). SIMID handshake happens
-  // in parallel but does NOT gate the UI. IMA already keeps the iframe
-  // hidden until init resolves; once it un-hides, the user sees an
-  // already-running game. This eliminates the "race between start event
-  // and game init" failure mode that broke the previous build.
-  simid.addEventListener('init',    () => { log('Player:init handled'); muteLinear(); });
-  simid.addEventListener('start',   () => { log('Player:startCreative'); muteLinear(); simid.reportTracking('creativeView').catch(() => {}); });
+  // Game is gated on Player:startCreative — the version that consistently
+  // worked. We attempted unconditional-on-DOMContentLoaded to mirror
+  // Google's reference, but on Fire TV WebView IMA hides the iframe at
+  // DOMContentLoaded time, so getBoundingClientRect returns 0×0 and the
+  // game boots with stale measurements. Reverted to the gated approach;
+  // game.js also re-measures each frame as a belt-and-braces backup.
+  simid.addEventListener('init',    () => log('Player:init handled'));
+  simid.addEventListener('start',   onStart);
   simid.addEventListener('stopped', () => teardown('player-stopped'));
   simid.addEventListener('skipped', () => teardown('player-skipped'));
+
+  // Some hosts never deliver Player:startCreative. 2-second fallback so the
+  // game still plays in those environments.
+  setTimeout(() => {
+    if (!started) {
+      log('No startCreative in 2 s — falling back to auto-start');
+      onStart();
+    }
+  }, 2000);
+
+  function onStart() {
+    if (started) return;
+    started = true;
+    log('startCreative → pause + mute + game');
+    muteLinear();
+    showStage();
+    armInactivity();
+    armHardCap();
+    simid.reportTracking('creativeView').catch(() => {});
+    requestAnimationFrame(() => {
+      try {
+        game.start();
+        log('game running');
+      } catch (e) {
+        log('game.start FAILED: ' + (e && e.message));
+      }
+    });
+  }
 
   function muteLinear() {
     if (mutedAlready) return;
     mutedAlready = true;
-    log('muting linear');
     // Send pause + volume change at three staggers — covers IMA builds
     // where one or the other is silently ignored.
     simid.requestPause().catch(() => {});
     simid.changeVolume(0, true).catch(() => {});
     setTimeout(() => { simid.requestPause().catch(() => {}); simid.changeVolume(0, true).catch(() => {}); }, 250);
     setTimeout(() => { simid.requestPause().catch(() => {}); simid.changeVolume(0, true).catch(() => {}); }, 1000);
-  }
-
-  // Render and start the game. No SIMID gating, but we DO wait for the
-  // iframe to actually have layout dimensions before measuring. If we
-  // measure while IMA still has the iframe hidden (display:none /
-  // visibility:hidden), getBoundingClientRect returns 0×0 and the game
-  // boots with fieldW=0 — basket clamped to one spot, fruits spawn at
-  // negative coords, looks frozen. Poll RAF until the field has real
-  // dimensions, then start.
-  function bootGame() {
-    log('boot — showing stage');
-    showStage();
-    armInactivity();
-    armHardCap();
-
-    let attempts = 0;
-    function attemptStart() {
-      const rect = fieldEl.getBoundingClientRect();
-      if (rect.width > 50 && rect.height > 50) {
-        try {
-          game.start();
-          log(`game running · ${Math.round(rect.width)}x${Math.round(rect.height)}`);
-        } catch (e) {
-          log('game.start FAILED: ' + (e && e.message));
-        }
-        return;
-      }
-      attempts++;
-      if (attempts > 600) {            // ~10 s @ 60 fps; give up cleanly
-        log('field never got dimensions; aborting');
-        return;
-      }
-      requestAnimationFrame(attemptStart);
-    }
-    requestAnimationFrame(attemptStart);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bootGame, { once: true });
-  } else {
-    bootGame();
   }
 
   // -------- Stage / Focus --------------------------------------------------
@@ -192,7 +179,7 @@
   }
 
   document.addEventListener('keydown', (e) => {
-    if (dismissed) return;
+    if (!started || dismissed) return;
     pokeInactivity();
     fadeHintOnce();
     // Unlock the audio context on the first remote keypress, in case the
@@ -244,7 +231,7 @@
   });
 
   document.addEventListener('keyup', (e) => {
-    if (dismissed) return;
+    if (!started || dismissed) return;
     if (matchKey(e, KEY.LEFT))  game.handleKey('left',  false);
     if (matchKey(e, KEY.RIGHT)) game.handleKey('right', false);
   });

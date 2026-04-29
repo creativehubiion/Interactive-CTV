@@ -1216,6 +1216,33 @@ either:
 inference as baseline (covers ~95% correctly), with optional
 supply-team / URL / display-manager overrides for the rest.
 
+**Why not just add a custom `&api=` URL macro?**
+Technically you can, but it's not an industry standard. URL macros are
+standardized for **runtime data** the SDK knows at request time
+(`[IFA]`, `[IP]`, `[UA]`, `[APP_BUNDLE]`, `{{CACHEBUSTER}}`, etc.) —
+modern SDKs auto-fill these. Capability declarations were never
+designed into the URL-macro pattern; they were designed into OpenRTB
+S2S (`imp.video.api` field). No SDK auto-fills `&api=` in URL
+templates.
+
+The industry-standard URL substitute for capability inference is
+**`displaymanager` + `displaymanagerver`** — OpenRTB-defined SDK
+self-identification fields. iion's URL spec already has slots for these
+(`&display_manager=&display_manager_version=`). When populated, an SSP
+can infer api capabilities from SDK identity:
+
+```
+displaymanager = "ima_android" + version >= 3.20  → api: [7, 8]
+displaymanager = "ima_html5"   + version 3.x      → api: [7, 8]
+displaymanager = "ima_tvos"                       → api: [7]    (no SIMID)
+displaymanager = "raf"                            → api: []     (Roku, no IMA)
+```
+
+This is the spec-aligned path: encourage publishers to populate
+`display_manager` (trivial in IMA SDK config — it's a documented knob),
+have Limelight infer `api` from it. Edge cases fall through to
+platform-based inference on `device.os`.
+
 So the better-scoped engineering ask for Limelight is:
 
 > "Add platform-based default `imp.video.api` inference to outbound

@@ -1133,6 +1133,40 @@ in Google's IMA SDK family. So a Fire TV publisher correctly declares
 "no VPAID". But the absence of OMID (7) and SIMID (8), which Fire TV
 publishers DO support, is the gap.
 
+### Verified VAST URL spec (the publisher-facing endpoint)
+
+The URL Limelight gives publishers to integrate has the form:
+
+```
+http://ads-247od.iionads.com/vastm/<tagid>?w=1920&h=1080&ifa=...&dmk=...&os=...&osv=...&app_bundle=...&app_name=...&display_manager=&display_manager_version=&...
+```
+
+Full parameter list (verified from a live URL, April 2026):
+
+| Category | Params present |
+|---|---|
+| Identity / device | `ifa`, `dpidsha`, `dpidmd`, `ifv`, `mi`, `mv`, `gpid`, `dmk`, `dmo`, `os`, `osv`, `car`, `ip`, `ua` |
+| Geo | `lat`, `lon` |
+| App | `aurl`, `an`, `app_domain`, `app_name`, `app_bundle`, `b` |
+| Privacy | `us_privacy`, `coppa`, `atts`, `lmt`, `gdpr`, `gdpr_consent` |
+| Video constraints | `w`, `h`, `vmind`, `vmaxd`, `min_bitrate`, `max_bitrate`, `pos`, `skip`, `ap`, `mut`, `vrw`, `sd`, `ct` |
+| Content | `cont_id/title/desc/dur/kw/url/cat/ln/series/genre/genre_cat/prod_quality/context/rating/media_rating/producer_*/network_*/channel_*` |
+| Supply chain | `schain`, `bcat`, `badv`, `inv_partner_domain`, `sc` |
+| Custom | `c1` … `c5` |
+| ID sync | `eids` |
+| SDK self-id (empty in observed samples) | `display_manager`, `display_manager_version` |
+| Cachebuster | `cb` |
+
+**What's NOT in the spec**: `api`, `protocols`, `simid`, `omid`, `vpaid`,
+`ad_apis`, or any equivalent field for the publisher's player to declare
+its interactive-ad framework support.
+
+So Limelight has no inbound source for `api` capability data. The
+`protocols: [1,2,3,7,4,5,6,8]` array in outbound bid requests is
+**injected from per-tag default config** in Limelight's admin UI, not
+from the publisher's URL. The same pattern could trivially be extended
+to inject `api`.
+
 ### Sample bid request (Fire TV Stick 4K Max — same hardware as our test device)
 
 ```json

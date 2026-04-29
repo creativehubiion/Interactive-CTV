@@ -98,12 +98,12 @@ html, body {
   top: 14vh; bottom: 12vh; left: 0; right: 0;
   z-index: 2;
   overflow: hidden;
-  /* Isolate the field so item transforms don't trigger ancestor reflow / repaint. */
-  contain: layout paint style;
+  /* Note: avoid `contain: layout paint` here — Amazon WebView (Chromium
+     118 on Fire OS 7) clips children and stops rendering item transforms
+     when this is set. Confirmed regression on user's Fire TV Stick 4K Max. */
 }
 
-/* Player. transform updated directly each RAF — no CSS transition or
-   drop-shadow filter (both kill frame rate on Fire Stick GPU). */
+/* Player wrapper — transform updated directly each RAF, no CSS transition. */
 .player {
   position: absolute;
   bottom: 2vh;
@@ -112,12 +112,55 @@ html, body {
   width: 16vh;
   height: 14vh;
   will-change: transform;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
+  pointer-events: none;
 }
 
-/* Items. No drop-shadow filter — emoji text-shadow gives just enough
-   definition without GPU cost. */
+/* CSS-drawn basket — shape pieces composed of plain divs. No SVG, no
+   emoji font dependency, renders identically on every WebView. */
+.basket-handle {
+  position: absolute;
+  left: 20%;
+  top:  0;
+  width: 60%;
+  height: 35%;
+  border: 0.7vh solid #5a2e0d;
+  border-bottom: none;
+  border-radius: 50% 50% 0 0;
+  box-sizing: border-box;
+}
+.basket-body {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 70%;
+  background: linear-gradient(180deg, #b86a30 0%, #8b4a18 100%);
+  border: 0.4vh solid #5a2e0d;
+  border-radius: 0 0 22% 22% / 0 0 50% 50%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.basket-rim {
+  position: absolute;
+  top: -0.4vh; left: -0.4vh; right: -0.4vh;
+  height: 25%;
+  background: #d28653;
+  border: 0.4vh solid #5a2e0d;
+  border-radius: 50% / 100%;
+  box-sizing: border-box;
+}
+.basket-weave {
+  position: absolute;
+  left: 6%;
+  width: 88%;
+  height: 0.3vh;
+  background: rgba(90, 46, 13, 0.85);
+}
+.basket-weave:nth-child(2) { top: 38%; }
+.basket-weave:nth-child(3) { top: 58%; }
+.basket-weave:nth-child(4) { top: 78%; }
+
+/* Items — emoji text fall vertically. */
 .item {
   position: absolute;
   font-size: 7vh;
@@ -125,8 +168,6 @@ html, body {
   top: 0;
   text-shadow: 0 0.2vh 0.4vh rgba(0, 0, 0, 0.55);
   will-change: transform;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
 }
 
 .score-burst {

@@ -88,17 +88,30 @@
   function onStart() {
     if (started) return;
     started = true;
-    log('Player:startCreative — pausing linear, muting, starting game');
-    // Pause + mute the linear. Pause alone doesn't reliably stop audio
-    // on every IMA build; pairing with a 0-volume change is bulletproof.
+    log('startCreative → pause + mute + game');
+    // Belt-and-braces audio kill: send pause AND volume change AND repeat
+    // both at small staggers in case IMA's pause-vs-volume code paths
+    // race or one is silently ignored on this build.
     simid.requestPause().catch(() => {});
     simid.changeVolume(0, true).catch(() => {});
+    setTimeout(() => { simid.requestPause().catch(() => {}); simid.changeVolume(0, true).catch(() => {}); }, 250);
+    setTimeout(() => { simid.requestPause().catch(() => {}); simid.changeVolume(0, true).catch(() => {}); }, 1000);
+
     showStage();
     armInactivity();
     armHardCap();
     simid.reportTracking('creativeView').catch(() => {});
+
     // Defer game start one frame so layout/measure is correct.
-    requestAnimationFrame(() => game.start());
+    requestAnimationFrame(() => {
+      log('game.start() running');
+      try {
+        game.start();
+        log('game running');
+      } catch (e) {
+        log('game.start FAILED: ' + (e && e.message));
+      }
+    });
   }
 
   // -------- Stage / Focus --------------------------------------------------
@@ -179,14 +192,19 @@
     }
 
     // Up arrow grabs focus to Skip from anywhere.
+    // Add explicit .focused class — some Fire TV WebView builds don't apply
+    // the :focus pseudo-class consistently for programmatically-focused
+    // elements. The class guarantees the visual ring shows up.
     if (matchKey(e, KEY.UP)) {
       skipBtn.focus();
+      skipBtn.classList.add('focused');
       e.preventDefault();
       return;
     }
 
     // Down from Skip returns to game (and clears focus).
     if (matchKey(e, KEY.DOWN) && document.activeElement === skipBtn) {
+      skipBtn.classList.remove('focused');
       skipBtn.blur();
       e.preventDefault();
       return;

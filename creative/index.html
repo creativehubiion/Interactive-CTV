@@ -78,9 +78,15 @@
     <div class="hud-body" id="hud-body"></div>
   </div>
 
-  <script src="hud.js"></script>
-  <script src="simid-protocol.js"></script>
-  <script src="game.js"></script>
-  <script src="app.js"></script>
+  <!--
+    Cache-bust the JS files. GH Pages serves with Cache-Control: max-age=600
+    and Fire TV WebView aggressively caches; bumping ?v=N forces a fresh
+    fetch when we deploy a code change. Match this to the ?v= in the VAST
+    InteractiveCreativeFile URL so IMA also re-fetches index.html fresh.
+  -->
+  <script src="hud.js?v=4"></script>
+  <script src="simid-protocol.js?v=4"></script>
+  <script src="game.js?v=4"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>

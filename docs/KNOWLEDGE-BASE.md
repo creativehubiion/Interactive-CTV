@@ -1167,6 +1167,33 @@ So Limelight has no inbound source for `api` capability data. The
 from the publisher's URL. The same pattern could trivially be extended
 to inject `api`.
 
+### Limelight Supply Tag form schema — verified, has no api field
+
+The "Creating and Editing Supply" page in Limelight's wiki documents
+the complete supply tag creation form. URL:
+
+```
+https://limelight.cloud.xwiki.com/xwiki/bin/view/Public/Client%20Documentation/Limelight%20Ui%20User%20Documentation%20V5/1.%20Limelight%20UI%20Introduction/Publishers/Creating%20and%20Editing%20Supply/
+```
+
+For oRTB Supply Source the documented fields are:
+
+| Type | Fields |
+|---|---|
+| Mandatory | Name, Type (oRTB/Tag/Header Bidding), Payout tracking (ADM/BURL), Status, Domain, Datacenter |
+| Optional | Service Fee Type (None/Rev Share), Statistics API Link (for reporting only), IAB Categories, Blocked Advertiser Domain, Latency compensation |
+
+For Tag / Header Bidding supply: also Channel (Web/App) + Ad Unit
+(Banner/Video/Native Image/Native Video/Audio) hierarchy.
+
+**No fields exist for**: API capabilities (VPAID/OMID/SIMID), Video
+API frameworks, Display Manager, Supported VAST protocols. The
+`protocols: [1,2,3,7,4,5,6,8]` we see in outbound bid requests must be
+hardcoded at the SSP level — there's no per-supply UI override.
+
+**Confirmed conclusion (Scenario B)**: the supply team cannot fix the
+api gap from their current admin UI. The field doesn't exist to set.
+
 ### Sample bid request (Fire TV Stick 4K Max — same hardware as our test device)
 
 ```json

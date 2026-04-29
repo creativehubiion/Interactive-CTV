@@ -1,0 +1,703 @@
+{
+  "play.google.com": {
+    "bundle": "play.google.com",
+    "kind": "package-name",
+    "app": "Mexico Vidaa CTV https://",
+    "platforms": [
+      "Vidaa",
+      "Samsung",
+      "TCL",
+      "Vizio",
+      "Android",
+      "Roku",
+      "Rogers",
+      "Videotron",
+      "Vewd",
+      "LG",
+      "Hisense",
+      "Tubi"
+    ],
+    "occurrences": 195,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "us.lgappstv.com": {
+    "bundle": "us.lgappstv.com",
+    "kind": "package-name",
+    "app": "Adam Rose 1270939 Australia LG CTV not clickable https://",
+    "platforms": [
+      "LG"
+    ],
+    "occurrences": 676,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "channelstore.roku.com": {
+    "bundle": "channelstore.roku.com",
+    "kind": "package-name",
+    "app": "Acidicblitzz 590792 United States Roku CTV not clickable https://",
+    "platforms": [
+      "Roku",
+      "Tubi"
+    ],
+    "occurrences": 709,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "www.samsung.com": {
+    "bundle": "www.samsung.com",
+    "kind": "package-name",
+    "app": "Adam Rose G21074016620 Australia Samsung CTV not clickable https://",
+    "platforms": [
+      "Samsung",
+      "Roku"
+    ],
+    "occurrences": 138,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.tcl.movieark": {
+    "bundle": "com.tcl.movieark",
+    "kind": "package-name",
+    "app": "Movieark",
+    "platforms": [
+      "TCL"
+    ],
+    "occurrences": 80,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 200,
+      "publisher": "",
+      "devUrl": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.tcl.waterfall.overseas": {
+    "bundle": "com.tcl.waterfall.overseas",
+    "kind": "package-name",
+    "app": "Tcl Channel",
+    "platforms": [
+      "TCL"
+    ],
+    "occurrences": 84,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 200,
+      "publisher": "",
+      "devUrl": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.milo_and_chip": {
+    "bundle": "com.samsung.milo_and_chip",
+    "kind": "package-name",
+    "app": "Milo And Chip",
+    "platforms": [
+      "Samsung"
+    ],
+    "occurrences": 59,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.royalty_gaming": {
+    "bundle": "com.samsung.royalty_gaming",
+    "kind": "package-name",
+    "app": "",
+    "platforms": [
+      "Samsung"
+    ],
+    "occurrences": 55,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "www.amazon.com": {
+    "bundle": "www.amazon.com",
+    "kind": "package-name",
+    "app": "United States Fire TV CTV https://",
+    "platforms": [
+      "Fire TV"
+    ],
+    "occurrences": 74,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.the_royalty_family": {
+    "bundle": "com.samsung.the_royalty_family",
+    "kind": "package-name",
+    "app": "",
+    "platforms": [
+      "Samsung"
+    ],
+    "occurrences": 55,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.vidaa.annoying_orange": {
+    "bundle": "com.vidaa.annoying_orange",
+    "kind": "package-name",
+    "app": "",
+    "platforms": [
+      "Vidaa"
+    ],
+    "occurrences": 48,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.tcl.browser": {
+    "bundle": "com.tcl.browser",
+    "kind": "package-name",
+    "app": "Browsehere",
+    "platforms": [
+      "TCL"
+    ],
+    "occurrences": 54,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 200,
+      "publisher": "",
+      "devUrl": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.tcl.livetv": {
+    "bundle": "com.tcl.livetv",
+    "kind": "package-name",
+    "app": "Live Tv",
+    "platforms": [
+      "TCL"
+    ],
+    "occurrences": 45,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 200,
+      "publisher": "",
+      "devUrl": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.bestofroblox": {
+    "bundle": "com.samsung.bestofroblox",
+    "kind": "package-name",
+    "app": "",
+    "platforms": [
+      "Samsung"
+    ],
+    "occurrences": 43,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.jordan_matter": {
+    "bundle": "com.samsung.jordan_matter",
+    "kind": "package-name",
+    "app": "Jordan Matter",
+    "platforms": [
+      "Samsung"
+    ],
+    "occurrences": 42,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.lg.ninja_kids_tv": {
+    "bundle": "com.lg.ninja_kids_tv",
+    "kind": "package-name",
+    "app": "Ninja Kids Tv",
+    "platforms": [
+      "LG"
+    ],
+    "occurrences": 40,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.bestofminecraft": {
+    "bundle": "com.samsung.bestofminecraft",
+    "kind": "package-name",
+    "app": "",
+    "platforms": [
+      "Samsung"
+    ],
+    "occurrences": 38,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.like_nastya": {
+    "bundle": "com.samsung.like_nastya",
+    "kind": "package-name",
+    "app": "",
+    "platforms": [
+      "Samsung"
+    ],
+    "occurrences": 35,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.lg.like_nastya_spain": {
+    "bundle": "com.lg.like_nastya_spain",
+    "kind": "package-name",
+    "app": "Like Nastya Spain",
+    "platforms": [
+      "LG"
+    ],
+    "occurrences": 34,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.meenyu": {
+    "bundle": "com.samsung.meenyu",
+    "kind": "package-name",
+    "app": "",
+    "platforms": [
+      "Samsung"
+    ],
+    "occurrences": 35,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.lg.ssundee": {
+    "bundle": "com.lg.ssundee",
+    "kind": "package-name",
+    "app": "Ssundee",
+    "platforms": [
+      "LG",
+      "Samsung",
+      "Vidaa",
+      "Cox"
+    ],
+    "occurrences": 33,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.rumble.webos.app": {
+    "bundle": "com.rumble.webos.app",
+    "kind": "package-name",
+    "app": "",
+    "platforms": [
+      "Android",
+      "Samsung"
+    ],
+    "occurrences": 33,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.rumble.battles": {
+    "bundle": "com.rumble.battles",
+    "kind": "package-name",
+    "app": "Com.Rumble.Androidtv.App",
+    "platforms": [
+      "Android"
+    ],
+    "occurrences": 32,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 200,
+      "publisher": "",
+      "devUrl": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.tubitv": {
+    "bundle": "com.tubitv",
+    "kind": "package-name",
+    "app": "Tubi: Free Movies & Live Tv",
+    "platforms": [
+      "Tubi",
+      "TCL"
+    ],
+    "occurrences": 31,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 200,
+      "publisher": "",
+      "devUrl": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.dental_digest": {
+    "bundle": "com.samsung.dental_digest",
+    "kind": "package-name",
+    "app": "Dental Digest",
+    "platforms": [
+      "Samsung"
+    ],
+    "occurrences": 31,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.ssundee": {
+    "bundle": "com.samsung.ssundee",
+    "kind": "package-name",
+    "app": "Ssundee",
+    "platforms": [
+      "Samsung",
+      "LG"
+    ],
+    "occurrences": 27,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.xnestorio": {
+    "bundle": "com.samsung.xnestorio",
+    "kind": "package-name",
+    "app": "",
+    "platforms": [
+      "Samsung"
+    ],
+    "occurrences": 26,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.like_nastya_spain": {
+    "bundle": "com.samsung.like_nastya_spain",
+    "kind": "package-name",
+    "app": "",
+    "platforms": [
+      "Samsung"
+    ],
+    "occurrences": 26,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.daylin_funhouse": {
+    "bundle": "com.samsung.daylin_funhouse",
+    "kind": "package-name",
+    "app": "",
+    "platforms": [
+      "Samsung"
+    ],
+    "occurrences": 23,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.": {
+    "bundle": "com.samsung.",
+    "kind": "package-name",
+    "app": "Bestofgaminganimation",
+    "platforms": [
+      "Samsung"
+    ],
+    "occurrences": 23,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.lg.alexa_rivera": {
+    "bundle": "com.lg.alexa_rivera",
+    "kind": "package-name",
+    "app": "",
+    "platforms": [
+      "LG"
+    ],
+    "occurrences": 22,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.dantdm": {
+    "bundle": "com.samsung.dantdm",
+    "kind": "package-name",
+    "app": "Daylin Funhouse",
+    "platforms": [
+      "Samsung"
+    ],
+    "occurrences": 22,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.tcl.tv.plus": {
+    "bundle": "com.tcl.tv.plus",
+    "kind": "package-name",
+    "app": "",
+    "platforms": [
+      "TCL"
+    ],
+    "occurrences": 21,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 200,
+      "publisher": "",
+      "devUrl": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.uzoth": {
+    "bundle": "com.samsung.uzoth",
+    "kind": "package-name",
+    "app": "Vanossgaming",
+    "platforms": [
+      "Samsung"
+    ],
+    "occurrences": 21,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.bestofamongus": {
+    "bundle": "com.samsung.bestofamongus",
+    "kind": "package-name",
+    "app": "Bestofamongus",
+    "platforms": [
+      "Samsung"
+    ],
+    "occurrences": 20,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.bumpy": {
+    "bundle": "com.samsung.bumpy",
+    "kind": "package-name",
+    "app": "Bumpy",
+    "platforms": [
+      "Samsung"
+    ],
+    "occurrences": 20,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.ali_a": {
+    "bundle": "com.samsung.ali_a",
+    "kind": "package-name",
+    "app": "",
+    "platforms": [
+      "Samsung"
+    ],
+    "occurrences": 19,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.tubitv.vizio": {
+    "bundle": "com.tubitv.vizio",
+    "kind": "package-name",
+    "app": "",
+    "platforms": [
+      "Vizio"
+    ],
+    "occurrences": 19,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.samsung.forge_labs": {
+    "bundle": "com.samsung.forge_labs",
+    "kind": "package-name",
+    "app": "",
+    "platforms": [
+      "Samsung"
+    ],
+    "occurrences": 19,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  },
+  "com.rumble.firetv": {
+    "bundle": "com.rumble.firetv",
+    "kind": "package-name",
+    "app": "Com.Rumble.Firetv.App",
+    "platforms": [
+      "Android",
+      "Fire TV",
+      "Roku"
+    ],
+    "occurrences": 18,
+    "developerLookup": {
+      "source": "playstore",
+      "status": 404,
+      "devUrl": "",
+      "publisher": ""
+    },
+    "adsTxt": null,
+    "verdict": null
+  }
+}

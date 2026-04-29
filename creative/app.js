@@ -178,6 +178,12 @@
   // Click fallback for desktop testing.
   tiles.forEach(t => t.addEventListener('click', () => selectTile(t)));
 
+  // Kick off the SIMID handshake. Per Google's reference creative, the
+  // creative initiates the session — this generates a UUID and sends
+  // `createSession` to the player; the player then replies with Player:init.
+  simid.createSession();
+
   // Ready signal — some players wait for this before showing the iframe.
+  // (Sent independently of init; harmless to send before init resolves.)
   simid.ready().catch(() => {});
 })();

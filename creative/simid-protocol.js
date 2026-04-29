@@ -18,42 +18,48 @@
   const isSimidEnvelope = (envelope) =>
     envelope && typeof envelope.protocol === 'string' && envelope.protocol.indexOf('SIMID') === 0;
 
+  // Message types in the SIMID 1.1 wire format are namespace-prefixed with
+  // "SIMID:" — i.e. "SIMID:Player:init", not bare "Player:init". Google's
+  // working sample creative uses these exact strings; IMA sends and listens
+  // for these. Our previous version dropped the prefix and silently lost
+  // every message, which is why the iframe was kept hidden by IMA.
   const PlayerMessage = {
-    INIT:                 'Player:init',
-    START_CREATIVE:       'Player:startCreative',
-    AD_SKIPPED:           'Player:adSkipped',
-    AD_STOPPED:           'Player:adStopped',
-    FATAL_ERROR:          'Player:fatalError',
-    RESIZE:               'Player:resize',
-    APP_BACKGROUNDED:     'Player:appBackgrounded',
-    APP_FOREGROUNDED:     'Player:appForegrounded',
+    INIT:                 'SIMID:Player:init',
+    START_CREATIVE:       'SIMID:Player:startCreative',
+    AD_SKIPPED:           'SIMID:Player:adSkipped',
+    AD_STOPPED:           'SIMID:Player:adStopped',
+    FATAL_ERROR:          'SIMID:Player:fatalError',
+    RESIZE:               'SIMID:Player:resize',
+    APP_BACKGROUNDED:     'SIMID:Player:appBackgrounded',
+    APP_FOREGROUNDED:     'SIMID:Player:appForegrounded',
   };
 
   const CreativeMessage = {
-    READY:                'Creative:ready',
-    CLICK_THRU:           'Creative:clickThru',
-    REQUEST_PLAY:         'Creative:requestPlay',
-    REQUEST_PAUSE:        'Creative:requestPause',
-    REQUEST_STOP:         'Creative:requestStop',
-    REQUEST_SKIP:         'Creative:requestSkip',
-    REQUEST_FULL_SCREEN:  'Creative:requestFullScreen',
-    REPORT_TRACKING:      'Creative:reportTracking',
-    FATAL_ERROR:          'Creative:fatalError',
-    LOG:                  'Creative:log',
+    READY:                'SIMID:Creative:ready',
+    CLICK_THRU:           'SIMID:Creative:clickThru',
+    REQUEST_PLAY:         'SIMID:Creative:requestPlay',
+    REQUEST_PAUSE:        'SIMID:Creative:requestPause',
+    REQUEST_STOP:         'SIMID:Creative:requestStop',
+    REQUEST_SKIP:         'SIMID:Creative:requestSkip',
+    REQUEST_FULL_SCREEN:  'SIMID:Creative:requestFullScreen',
+    REPORT_TRACKING:      'SIMID:Creative:reportTracking',
+    FATAL_ERROR:          'SIMID:Creative:fatalError',
+    LOG:                  'SIMID:Creative:log',
+    GET_MEDIA_STATE:      'SIMID:Creative:getMediaState',
   };
 
   const MediaMessage = {
-    DURATION_CHANGE: 'Media:durationchange',
-    ENDED:           'Media:ended',
-    ERROR:           'Media:error',
-    PAUSE:           'Media:pause',
-    PLAY:            'Media:play',
-    PLAYING:         'Media:playing',
-    SEEKED:          'Media:seeked',
-    SEEKING:         'Media:seeking',
-    STALLED:         'Media:stalled',
-    TIMEUPDATE:      'Media:timeupdate',
-    VOLUME_CHANGE:   'Media:volumechange',
+    DURATION_CHANGE: 'SIMID:Media:durationchange',
+    ENDED:           'SIMID:Media:ended',
+    ERROR:           'SIMID:Media:error',
+    PAUSE:           'SIMID:Media:pause',
+    PLAY:            'SIMID:Media:play',
+    PLAYING:         'SIMID:Media:playing',
+    SEEKED:          'SIMID:Media:seeked',
+    SEEKING:         'SIMID:Media:seeking',
+    STALLED:         'SIMID:Media:stalled',
+    TIMEUPDATE:      'SIMID:Media:timeupdate',
+    VOLUME_CHANGE:   'SIMID:Media:volumechange',
   };
 
   class SimidCreative {
@@ -127,6 +133,32 @@
 
     /** Tell the player the creative is ready (separate from the init reply). */
     ready() { return this.send(CreativeMessage.READY); }
+
+    /**
+     * Initiate the SIMID session. Per Google's reference creative this is the
+     * first message the creative sends — it generates a UUID sessionId and
+     * emits `createSession`. The player responds with `Player:init`. Without
+     * this, some players never start the handshake.
+     */
+    createSession() {
+      this._sessionId = generateUuid();
+      // createSession is sent without the SIMID: prefix and without our
+      // sessionId-tracked Promise machinery, matching the reference impl.
+      const envelope = {
+        protocol: PROTOCOL_OUT,
+        sessionId: this._sessionId,
+        messageId: this._nextMessageId++,
+        type: 'createSession',
+        timestamp: Date.now(),
+        args: {},
+      };
+      try {
+        if (window.HUD && typeof window.HUD.logOutbound === 'function') {
+          window.HUD.logOutbound(envelope);
+        }
+        window.parent.postMessage(JSON.stringify(envelope), '*');
+      } catch (e) { /* parent gone */ }
+    }
 
     requestStop(reason)   { return this.send(CreativeMessage.REQUEST_STOP,  { reason }); }
     requestSkip()         { return this.send(CreativeMessage.REQUEST_SKIP); }
@@ -204,6 +236,22 @@
         window.parent.postMessage(JSON.stringify(replyEnvelope), '*');
       } catch (e) { /* parent gone */ }
     }
+  }
+
+  function generateUuid() {
+    // Mirrors Google's reference: 36 chars, version-4 UUID-like.
+    const HEX = '0123456789abcdef';
+    const out = new Array(36);
+    let r = 0;
+    for (let i = 0; i < 36; i++) {
+      if (i === 8 || i === 13 || i === 18 || i === 23) { out[i] = '-'; continue; }
+      if (i === 14) { out[i] = '4'; continue; }
+      if (r <= 2) r = (Math.random() * 0x100000000) | 0;
+      const d = r & 0xf;
+      r >>= 4;
+      out[i] = HEX[i === 19 ? (d & 0x3) | 0x8 : d];
+    }
+    return out.join('');
   }
 
   global.SimidCreative   = SimidCreative;

@@ -236,9 +236,6 @@
     }
 
     // Up arrow grabs focus to Skip from anywhere.
-    // Add explicit .focused class — some Fire TV WebView builds don't apply
-    // the :focus pseudo-class consistently for programmatically-focused
-    // elements. The class guarantees the visual ring shows up.
     if (matchKey(e, KEY.UP)) {
       skipBtn.focus();
       skipBtn.classList.add('focused');

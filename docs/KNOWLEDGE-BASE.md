@@ -19,9 +19,18 @@ an `<InteractiveCreativeFile>`. Renders on:
 - iOS via IMA iOS SDK (untested but supported)
 - *Not* tvOS — Google's IMA tvOS SDK does not implement SIMID
 
-The creative is a D-pad-navigable selector with on-screen debug HUD,
-controllable by the TV remote. The whole thing is served from GitHub
-Pages at `https://creativehubiion.github.io/Interactive-CTV`.
+The creative is a **30-second catch-the-falling-fruit mini-game** with a
+D-pad-controlled basket, on-screen debug HUD, and full SIMID lifecycle
+wired to iion's DMP tracker. Hosted on GitHub Pages at
+`https://creativehubiion.github.io/Interactive-CTV`.
+
+**iion's stack**:
+- DSP+SSP: **Limelight** (iion-internal product)
+- DMP tracker: `https://staging-dmp-producer.iion.io/tracker/impressions`
+  (PLL macros filled server-side at request time)
+- Publisher integration: publishers' CTV apps run their own ad SDK
+  (typically Google IMA Client-Side); Limelight either operates as the
+  publisher's SSP or bids into the publisher's existing SSP via OpenRTB
 
 ---
 
@@ -622,3 +631,441 @@ disassemble Google's compiled creative and diff against ours.
 
 *Last verified working: 2026-04-29 with IMA Android SDK 3.30.3 on Fire TV
 Stick 4K Max (AFTMM) running Fire OS 7+ / Amazon WebView Chromium 118.*
+
+---
+
+## 13. iion-specific integration
+
+### Stack
+
+| Component | Detail |
+|---|---|
+| DSP + SSP | **Limelight** (iion-internal product) |
+| DMP tracker | `https://staging-dmp-producer.iion.io/tracker/impressions` |
+| Demand sources | Direct + demand partners, brought in via Limelight |
+| Publisher integration | Either Limelight as the publisher's SSP, or Limelight bidding into another SSP via OpenRTB |
+| GitHub repo | `creativehubiion/Interactive-CTV` (public; see §16 for privacy options) |
+
+### iion's PLL macro list
+
+The standard tracker URL on iion campaigns uses these macros, replaced
+server-side at request time:
+
+```
+%%campaignId%%      → campaign_id
+%%pubId%%           → publisher_id
+%%creativeId%%      → creative_id
+%%requestId%%       → request_id
+%%userId%%          → user_id
+%%ip%%              → ip_address
+%%bundle%%          → app_id_bundle_id
+%%ifa%%             → maid (mobile ad id)
+%%appName%%         → app_name
+%%os%%              → os
+%%userAgentEnc%%    → user_agent (URL-encoded)
+%%lat%% / %%lon%%   → latitude / longitude
+%%pageUrl%%         → page_url
+%%country%%         → country
+%%deviceMake%%      → device_make
+%%domain%%          → domain
+%%height%% %%width%% → dimensions
+%%videoMinDuration%% / %%videoMaxDuration%%
+%%contgenre%% %%contcat%%   → content metadata
+%%gdpr%% %%gdprConsent%%    → privacy
+%%demandId%%        → demand_id
+%%adgroupId%%       → line_item
+```
+
+The creative **never** hardcodes these or fills them in itself. They
+flow through the URL pre-replaced by the SSP, and the creative just
+appends `&event_name=…` and event-specific runtime data.
+
+See `docs/PRODUCTION-INTEGRATION.md` for the full AdParameters wire
+format + funnel SQL queries.
+
+---
+
+## 14. CSAI vs SSAI — critical filter for "where does SIMID actually work"
+
+**SIMID requires Client-Side Ad Insertion (CSAI).** Server-side stitched
+ads (SSAI / DAI) bake the linear into the content stream and break SIMID
+rendering completely — there's no client-side IMA SDK running for the ad
+break, no separate ad layer to overlay an iframe on, and no input
+plumbing.
+
+### IMA has TWO SDK products — easy to confuse
+
+| Product | Insertion model | SIMID? |
+|---|---|---|
+| **IMA Client-Side SDK** (`AdsLoader` + `AdsManager`) | CSAI | ✅ |
+| **IMA DAI SDK** (`StreamRequest` + `StreamManager`) | SSAI | ❌ |
+
+Both are "IMA SDK" colloquially. **Only the Client-Side one renders
+SIMID.** When verifying a publisher's stack, ask whether they use
+`AdsManager` (CSAI) or `StreamManager` (DAI).
+
+### Real-world heuristics
+
+| Publisher type | Likely insertion | SIMID? |
+|---|---|---|
+| Premium VOD apps with own engineering teams | CSAI | ✅ if IMA CS |
+| Custom Fire TV publisher apps (catalog VOD) | CSAI | ✅ |
+| FAST channel via WURL / Wurl-Roku | **SSAI** | ❌ |
+| Samsung TV Plus / LG Channels / Xumo | **SSAI** | ❌ |
+| Pluto TV, Tubi | SSAI | ❌ |
+| Smart TV native ad inventory | Mixed | ⚠️ verify |
+
+### IMA SDK variant matrix
+
+| IMA SDK | Platforms | SIMID 1.0 |
+|---|---|---|
+| IMA HTML5 (Web) | Tizen, webOS, SmartCast, Vidaa, in-browser | ✅ |
+| IMA Android | Android TV, Google TV, Fire TV | ✅ |
+| IMA iOS | iOS, iPadOS (mobile, not CTV) | ✅ |
+| IMA tvOS | Apple TV | ❌ — explicitly excluded |
+| IMA Cast | (deprecated) | — |
+
+Roku has no IMA SDK at all — uses Roku Ad Framework (RAF) +
+proprietary BrightLine/Innovid runtimes for interactive.
+
+---
+
+## 15. OpenRTB SIMID signal — the cleanest "is this inventory SIMID-capable" check
+
+OpenRTB 2.6 `Video` object includes:
+
+```json
+"imp": [{
+  "video": {
+    "protocols": [3, 5, 6, 7, 8],   // VAST 2.0/3.0/3.0wrapper/4.0/4.0wrapper
+    "api":       [7, 8]              // 7 = OMID, 8 = SIMID
+  }
+}]
+```
+
+**API code 8 = SIMID 1.0 support declared by the publisher's player.**
+
+For Limelight's bid stream:
+
+```sql
+SELECT app_bundle, device_os,
+       COUNT(*) AS total_requests,
+       SUM(CASE WHEN '8' = ANY(string_to_array(imp_video_api, ',')) THEN 1 ELSE 0 END) AS simid_capable
+FROM bid_requests
+WHERE date >= NOW() - INTERVAL '7 days'
+GROUP BY app_bundle, device_os
+ORDER BY total_requests DESC;
+```
+
+This is the **cheapest, highest-fidelity** signal of SIMID-renderable
+inventory. Beats scraping app store listings (Amazon serves CAPTCHA
+walls; Vizio/Vewd/Vidaa internal IDs aren't on Play Store).
+
+**Production strategy**: dual-creative campaigns. Bid SIMID where
+`api: [8]` is declared; bid plain VAST linear elsewhere. Same audience
+targeting, two creative variants delivered conditionally.
+
+---
+
+## 16. Hosting + privacy: Pages doesn't work on private free repos
+
+**Important**: GitHub Pages on a free GitHub plan only serves from
+**public** repos. Flipping `creativehubiion/Interactive-CTV` private
+breaks the VAST URL and IMA returns `AdError 1005: Failed to fetch`.
+
+### Three paths
+
+| Option | Cost | Notes |
+|---|---|---|
+| GitHub Pro | $4/mo | Enables Pages on private repos. Same URLs keep working. Cheapest, no migration. |
+| **Cloudflare Pages** | **Free** | Connects to private GitHub repo, serves publicly at `<project>.pages.dev`. Free for commercial use. Faster CDN + cache purge API. **Recommended for iion.** |
+| Vercel | Free for personal, **$20/mo for commercial** | Hobby tier explicitly forbids commercial use. Cloudflare wins on price. |
+
+### Cache-bust workflow on GitHub Pages (current setup)
+
+GH Pages serves `Cache-Control: max-age=600`. Layers between push and
+Fire TV:
+
+```
+git push (instant)
+  → GH build pipeline (30 s – 2 min)
+  → Fastly CDN (30 s – 2 min)
+  → Fire TV WebView resource cache (max-age=600)
+  → IMA SDK in-memory HTML cache (per session)
+```
+
+**Force-fresh on every code change**:
+1. Bump `?v=N` on script tags in `index.html` AND on the
+   InteractiveCreativeFile URL in the VAST template.
+2. Wait for the deploy poll to confirm GH Pages serves the new version.
+3. Force-stop the demo on Fire TV:
+   ```
+   adb shell am force-stop com.google.android.exoplayer2.demo
+   ```
+4. Relaunch the ad.
+
+Cloudflare Pages would eliminate this dance via instant cache purge.
+
+---
+
+## 17. IMA Android SDK 3.30.3 specific quirks (the testbed)
+
+These three behaviors of IMA Android 3.30.3 informed creative design:
+
+### Use `requestSkip`, NEVER `requestStop`
+
+`SIMID:Creative:requestStop` is interpreted by IMA Android 3.30.3 as
+"creative crashed, retry from top" → reloads iframe + replays linear.
+Use `requestSkip` for user-initiated dismissal. Google's reference
+compiled creative also only uses `requestSkip`.
+
+### Linear audio is uncontrollable from inside the iframe
+
+`Creative:requestPause` doesn't reliably stop linear audio.
+`Creative:requestChangeVolume(0, muted=true)` is also ignored.
+Multi-stage retries (0ms, 250ms, 1s) didn't help.
+
+**Production fix**: serve a **silent linear MediaFile** (re-encoded with
+no audio track). Then it doesn't matter what IMA does with audio
+control — there's no audio to mute.
+
+### `<AdParameters>` requires re-testing per VAST shape
+
+Including `<AdParameters>` in VAST 4.2 + namespaced + CDATA-wrapped form
+broke SIMID rendering on this build (linear played, overlay didn't
+appear). Removing it restored SIMID. Untested in our current VAST 3.0 +
+plain CDATA shape.
+
+If AdParameters stays broken, fall back to passing the tracker URL via
+`?tracker=…` query string on the InteractiveCreativeFile URL.
+
+---
+
+## 18. Game-init timing — when to call game.start()
+
+**Rule**: when the creative includes a game/UI that depends on measured
+layout dimensions, gate `game.start()` on `Player:startCreative` (with a
+2-second auto-start fallback), AND re-measure each frame inside the
+game loop.
+
+**Why**: IMA keeps the SIMID iframe `display:none` until init resolves.
+If the game runs `getBoundingClientRect()` during DOMContentLoaded, the
+field returns 0×0 → game boots with `fieldW=0` → basket clamps, items
+spawn off-screen, **timer keeps counting but everything appears frozen**.
+
+The Google reference creative pattern (`new SimidSurvey().startCreative()`
+on page load) only works because their UI uses fixed positions, no
+measurements.
+
+In `app.js`:
+```js
+simid.addEventListener('start', onStart);
+setTimeout(() => { if (!started) onStart(); }, 2000);
+
+function onStart() {
+  showStage();
+  requestAnimationFrame(() => game.start());
+}
+```
+
+In `game.js _loop`:
+```js
+const rect = this.fieldEl.getBoundingClientRect();
+if (rect.width > 50 && rect.width !== this.fieldW) {
+  this.fieldW = rect.width;
+  if (oldW === 0) this.playerX = this.fieldW / 2;
+}
+```
+
+Belt-and-braces. Confirmed twice during dev that unconditional-on-DOMContentLoaded
+boot breaks the game on Fire TV.
+
+---
+
+## 19. Fire TV WebView (Amazon Chromium 118) gotchas
+
+Amazon forks Chromium for its WebView. Confirmed quirks:
+
+1. **`contain: paint`** clips absolute children (rendering bug). Don't use it.
+2. **CSS transforms on `<svg>` root elements** sometimes render the SVG
+   as a "broken image placeholder" icon. Wrap SVGs in a `<div>` and
+   transform the div, or use CSS-drawn shapes when possible.
+3. **`filter: drop-shadow()`** is GPU-expensive — drops frames at scale.
+   Use `text-shadow` instead.
+4. **CSS `transition: transform Xms`** fights with RAF transform updates
+   and causes micro-stutter on continuously-moving game elements.
+   Pick one — don't combine.
+5. **Bundled emoji font caps at Emoji 9.0** (~2016). 🧺 (Emoji 11.0),
+   🪨 (13.0) render as tofu. Stick to Emoji 1.0–3.0 era glyphs OR use
+   CSS-drawn shapes.
+6. **WebView debug socket** is named `webview_devtools_remote_<PID>` —
+   the PID changes per launch. `chrome://inspect/#devices` may not
+   discover it; manually forward via `adb forward tcp:9222
+   localabstract:webview_devtools_remote_<PID>` and hit
+   `localhost:9222/json/list`.
+7. **`chrome://inspect` "Device is locked"** is a Fire OS false positive
+   (`mShowingLockscreen=true` is reported in normal states). Use direct
+   port forward to bypass.
+8. **First-gen Fire Sticks** ship older WebView; don't ship ES2020+
+   syntax (optional chaining, nullish coalescing) without transpiling.
+
+### Performance budget
+
+- DOM ≤ 500 nodes
+- `transform: translate3d(...)` + `will-change: transform` for moving
+  elements
+- Avoid `box-shadow: blur` and `filter: blur`
+- Cap simultaneous animated children to ~10
+- Pre-decode static images (in initial DOM)
+
+---
+
+## 20. CTV inventory classification — `tools/classify-inventory.js`
+
+The repo includes a re-runnable classifier for CTV inventory files:
+
+```bash
+node tools/classify-inventory.js path/to/inventory.txt out.csv
+```
+
+Takes a `pdftotext -layout` extraction of an inventory file and outputs:
+- Per-row verdict (`yes`/`maybe`/`unlikely`/`no`)
+- Per-platform aggregated stats
+- Live app-ads.txt probes for major CTV publisher domains
+
+### Per-platform SIMID baseline encoded in the classifier
+
+| Platform | Baseline | IMA SDK | Why |
+|---|---|---|---|
+| Fire TV | yes | Android | IMA Android supports SIMID 1.0 |
+| Android / Android TV / Google TV | yes | Android | Same |
+| Roku | no | none | RAF, not SIMID |
+| TCL | maybe | split | Both Roku TV + Google TV variants ship under TCL |
+| Samsung CTV / Samsung | maybe | HTML5 | Tizen web-based; SIMID if IMA HTML5; mostly Samsung Ads |
+| LG | maybe | HTML5 | webOS, same |
+| Vizio | maybe | HTML5 | SmartCast |
+| Vidaa | maybe | HTML5 | Hisense Vidaa OS |
+| Vewd | maybe | HTML5 | Vewd Smart TV browser |
+| Comcast / Cox / Rogers / Videotron | unlikely | unknown | Cable STB, usually SSAI |
+| Xumo | unlikely | mixed | FAST = SSAI |
+| Tubi | unlikely | unknown | Fox-owned, own SDK |
+
+### Heuristic adjustments per row
+
+- App name matches `/24[\s-]?hour|news\s*now|\d+news|channel|network|tv|live/i`
+  → downgrade by one step
+- `publisher_source = WURL` → downgrade by one step (Roku-owned FAST
+  distribution)
+
+### Live probe results (April 2026, in `tools/ctv-inventory-classified-probes.json`)
+
+- **Pluto TV**: 19× google + 50× FreeWheel + 7× SpringServe → IMA but mixed SSAI
+- **Tubi**: 0 google → confirms own ad stack
+- **Samsung**: 14× google + 26× FreeWheel → cleanest IMA signal
+- **TCL**: 63× google + 105× FreeWheel + 9× SpringServe → mixed
+- **Vizio**: 17× google + 175× FreeWheel + 8× SpringServe → mixed
+- **Vidaa**: 27× google + 85× FreeWheel + 5× SpringServe → mixed
+- **Roku**: 6× google + 22× FreeWheel + 1× SpringServe → mostly RAF
+- **Xumo**: 15× google + 122× FreeWheel + 2× SpringServe → SSAI heavy
+- **Comcast**: 3× google + 32× FreeWheel + 1× Truex → confirms Truex as their interactive
+
+### Headline rollup on the supplied 9,425-row gaming-adjacent CTV inventory
+
+| Verdict | % | Occurrences | What it means |
+|---|---|---|---|
+| ✅ yes | 10.1% | 481 | Fire TV + Android TV — definite SIMID |
+| ⚠️ maybe | 57.9% | 2,750 | Smart TV (Samsung/LG/Vizio/Vidaa/TCL) — depends on IMA HTML5 usage |
+| ❌ unlikely | 14.9% | 708 | FAST + STB — server-stitched |
+| 🚫 no | 17.0% | 807 | Roku — RAF, no SIMID at all |
+
+### What doesn't work for per-app live data
+
+- Amazon ASIN scraping → CAPTCHA wall on every request
+- Play Store lookup of vendor-internal IDs (com.vizio.X) → these aren't
+  real Play Store packages, return 404
+
+For per-app data at scale, options are: (a) a paid commercial service
+(Pixalate / DoubleVerify / IAS), (b) an OpenRTB bid-stream signal
+analysis (see §15 — best free path), or (c) a render-confirmed beacon
+from the SIMID creative itself logged through the DMP funnel
+(`docs/PRODUCTION-INTEGRATION.md`).
+
+---
+
+## 21. Fruit-catch creative — current build
+
+30-second native-DOM mini-game inside the SIMID shell. Pure DOM, no
+canvas, no Phaser — runs cheaply on entry-level Fire Sticks.
+
+### Files
+
+| File | Role |
+|---|---|
+| `index.html` | DOM scaffold + early-bird postMessage buffer in `<head>` |
+| `styles.css` | TV-safe layout 1920×1080, CSS-drawn basket, debug HUD |
+| `simid-protocol.js` | SIMID 1.1 — type-based filter, no `protocol` field |
+| `tracker.js` | iion DMP tracker integration (events appended to URL from AdParameters) |
+| `game.js` | Fruit-catch logic + Web Audio synthesized SFX |
+| `app.js` | Lifecycle orchestration, exit guardrails, input routing |
+| `hud.js` | On-screen debug HUD (default ON; `?debug=0` to suppress) |
+
+### Tunables (top of `game.js`)
+
+```js
+const ROUND_MS  = 30_000;
+const SPAWN_MIN_MS = 850;
+const SPAWN_MAX_MS = 1500;
+const FALL_MIN_PX_PER_S = 180;
+const FALL_MAX_PX_PER_S = 290;
+const PLAYER_SPEED_PX_PER_S = 900;
+const GOOD_ITEMS = ['🍎','🍓','🍇','🍌','🥝','🍑','🍊'];   // Emoji 1.0–3.0 only
+const BAD_ITEMS  = ['💣'];                                  // 🪨 dropped — Fire OS 7 doesn't have Emoji 13.0
+const BAD_PROB   = 0.18;
+```
+
+### Exit guardrails (top of `app.js`)
+
+- `INACTIVITY_MS = 60_000` — auto-skip after 60s no input
+- `HARD_CAP_MS   = 180_000` — force-exit at 180s
+
+### Input
+
+| Key | Action |
+|---|---|
+| Left / Right | Move basket (continuous hold-to-move) |
+| Up | Pull focus to Skip button |
+| Down (when Skip focused) | Return focus to game |
+| OK on Skip | Confirm skip |
+| Back / Escape | Instant skip |
+
+**Caveat**: Up/Down for Skip conflicts with games that need 4-way input.
+For future games requiring all directions, switch to **Pattern C**:
+modal-on-long-press exit menu (long-press OK or Back for 1.5 s opens a
+Skip dialog; all D-pad keys go to game by default).
+
+### Sounds (Web Audio synthesized, no external assets)
+
+- Round start: ascending arpeggio
+- Catch fruit: rising triangle blip
+- Catch bomb: descending square buzz
+- Last 3 seconds: tick beep on each second
+- Round end: descending fanfare
+
+AudioContext is unlocked on first remote keypress (some Fire TV WebView
+builds keep contexts suspended).
+
+---
+
+## 22. Open items / decisions deferred
+
+These were active topics and should be picked back up when relevant:
+
+| Topic | Status | Next move |
+|---|---|---|
+| Repo privacy | Public on GitHub for now | Migrate to Cloudflare Pages → flip private. See §16. |
+| DMP tracker activation | Module integrated, but disabled (no URL supplied) | Either re-add `<AdParameters>` to VAST and re-test on Fire TV, or pass `?tracker=…` on InteractiveCreativeFile URL |
+| Linear audio mute | IMA Android 3.30.3 won't honor pause/volume | Production: serve a silent linear MediaFile |
+| Up/Down for game vs Skip menu | Currently Up/Down reserved for Skip | Switch to Pattern C (modal-on-long-press) when shipping games that need 4-way |
+| Inventory measurement | Heuristic classification done | Run dual-creative test through Limelight; query bid stream for `imp.video.api: [8]`; use DMP funnel for `simid_init` ratio per publisher |
+| IMA SDK upgrade | 3.30.3 in testbed | Bump to 3.39+ if we hit SDK limitations not solvable at creative layer |
+

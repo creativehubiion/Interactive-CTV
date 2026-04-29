@@ -114,6 +114,9 @@
       return new Promise((resolve, reject) => {
         this._pendingResolves.set(messageId, { resolve, reject });
         try {
+          if (window.HUD && typeof window.HUD.logOutbound === 'function') {
+            window.HUD.logOutbound(envelope);
+          }
           window.parent.postMessage(JSON.stringify(envelope), '*');
         } catch (e) {
           this._pendingResolves.delete(messageId);
@@ -195,6 +198,9 @@
         args: { messageId: originalMsg.messageId, value },
       };
       try {
+        if (window.HUD && typeof window.HUD.logOutbound === 'function') {
+          window.HUD.logOutbound(replyEnvelope);
+        }
         window.parent.postMessage(JSON.stringify(replyEnvelope), '*');
       } catch (e) { /* parent gone */ }
     }

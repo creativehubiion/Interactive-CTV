@@ -98,20 +98,15 @@
     add('err', `JS error: ${e.message} @ ${e.filename}:${e.lineno}`);
   });
 
-  // Patch postMessage so we can see exactly what the creative sends out
-  // and what the player sends back. This is what tells us whether the IMA
-  // host is even speaking SIMID.
-  const origPostMessage = window.parent.postMessage.bind(window.parent);
-  window.parent.postMessage = function (data, target) {
-    if (forced) {
-      try {
-        const obj = typeof data === 'string' ? JSON.parse(data) : data;
-        if (obj && typeof obj.protocol === 'string' && obj.protocol.indexOf('SIMID') === 0) {
-          add('msg', `→ ${obj.type} #${obj.messageId}` + (obj.args && Object.keys(obj.args).length ? ' ' + summarize(obj.args) : ''));
-        }
-      } catch { /* not JSON */ }
-    }
-    return origPostMessage(data, target);
+  // Outbound logging is wired up by simid-protocol.js, which calls
+  // HUD.logOutbound(envelope) right before postMessage. We avoid patching
+  // window.parent.postMessage because cross-origin sandboxed iframes
+  // can't reassign properties on the parent window — that throws
+  // SecurityError and aborts the rest of this IIFE.
+  global.HUD.logOutbound = function (envelope) {
+    if (!forced || !envelope) return;
+    add('msg', `→ ${envelope.type} #${envelope.messageId}` +
+        (envelope.args && Object.keys(envelope.args).length ? ' ' + summarize(envelope.args) : ''));
   };
 
   window.addEventListener('message', (event) => {

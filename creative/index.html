@@ -3,17 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=1920, initial-scale=1, user-scalable=no" />
-  <title>Interactive CTV Ad</title>
+  <title>Interactive CTV Ad — Allkinds</title>
   <link rel="stylesheet" href="styles.css" />
 
   <!--
     Early-bird message buffer. The iframe may receive SIMID:Player:init
-    from IMA *before* our external scripts finish loading on slow CTV
-    WebViews (Fire Stick gen 1/2 take 200-500ms to fetch 3 external JS
-    files). If we miss init, IMA never resolves and the iframe stays
-    hidden. This inline script runs synchronously while the document
-    parses and captures every postMessage into a buffer that
-    simid-protocol.js drains as soon as it loads.
+    from IMA before our external scripts finish loading on slow CTV
+    WebViews. If we miss init, IMA never resolves and the iframe stays
+    hidden. This inline script captures every postMessage into a buffer
+    that simid-protocol.js drains as soon as it loads.
   -->
   <script>
     (function () {
@@ -26,50 +24,27 @@
   </script>
 </head>
 <body>
+  <!--
+    Game stage. The Phaser game is embedded in an iframe; our SIMID layer
+    handles the postMessage handshake with IMA. The iframe gets keyboard
+    focus once SIMID:Player:startCreative arrives, so D-pad presses on
+    the TV remote reach the game's own keydown listener directly.
+
+    The "skip" button is visible only briefly to keep the experience
+    clean, but always reachable via the Back button on the remote.
+  -->
   <div id="stage" class="stage" aria-hidden="true">
-    <div class="brand-strip">
-      <div class="brand-logo">YOUR BRAND</div>
-      <div class="prompt">Use the remote to choose</div>
-    </div>
+    <iframe id="game"
+            class="game-frame"
+            title="Allkinds — interactive ad"
+            allow="autoplay; gamepad; fullscreen"
+            sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+            src="https://tech-iion.github.io/advertiser-creatives/allkindsLandscape/"></iframe>
 
-    <h1 class="headline">What sounds good tonight?</h1>
-
-    <div class="grid" id="grid">
-      <button class="tile" tabindex="0" data-id="movies" data-row="0" data-col="0" autofocus>
-        <span class="tile-icon">🎬</span>
-        <span class="tile-label">Movies</span>
-      </button>
-      <button class="tile" tabindex="0" data-id="sports" data-row="0" data-col="1">
-        <span class="tile-icon">🏀</span>
-        <span class="tile-label">Sports</span>
-      </button>
-      <button class="tile" tabindex="0" data-id="music"  data-row="1" data-col="0">
-        <span class="tile-icon">🎵</span>
-        <span class="tile-label">Music</span>
-      </button>
-      <button class="tile" tabindex="0" data-id="games"  data-row="1" data-col="1">
-        <span class="tile-icon">🎮</span>
-        <span class="tile-label">Games</span>
-      </button>
-    </div>
-
-    <div class="footer">
-      <span class="hint"><span class="key">◀ ▶ ▲ ▼</span> Navigate</span>
-      <span class="hint"><span class="key">OK</span> Select</span>
-      <span class="hint"><span class="key">BACK</span> Skip</span>
-    </div>
-
-    <div id="confirm" class="confirm hidden">
-      <h2 id="confirm-title">Got it.</h2>
-      <p id="confirm-body">Returning you to your show…</p>
-    </div>
+    <button id="skip" class="skip-btn" tabindex="0" aria-label="Skip ad">Skip ▶</button>
   </div>
 
-  <!--
-    Debug HUD. Visible whenever the URL contains ?debug=1 (default ON for the
-    sample VAST). Shows SIMID lifecycle, postMessage I/O, key events, and
-    focus changes so you can verify Fire TV WebView behavior at a glance.
-  -->
+  <!-- Debug HUD. Visible by default; pass ?debug=0 to suppress. -->
   <div id="hud" class="hud">
     <div class="hud-head">
       <span class="hud-title">SIMID DEBUG</span>

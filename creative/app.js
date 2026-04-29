@@ -41,9 +41,12 @@
   const HARD_CAP_MS   = 180_000;
 
   const simid = new SimidCreative();
-  // Tracker initially built without env data; reconfigured once Player:init
-  // arrives and we have access to AdParameters from the VAST tag.
-  let tracker = new Tracker({ context: { creative_id: 'fruit-catch-v1', creative_version: '0.9' } });
+  // Tracker is configured once Player:init arrives and we can read
+  // AdParameters from the VAST tag. Until then it's a no-op (records to
+  // the local HUD but doesn't fire pings) — that's fine because the
+  // earliest event we want to log is simid_init itself, which we fire
+  // immediately after configuring the tracker on init.
+  let tracker = new Tracker();
   let started   = false;
   let dismissed = false;
   let inactivityTimer = null;
@@ -94,22 +97,13 @@
   // DOMContentLoaded time, so getBoundingClientRect returns 0×0 and the
   // game boots with stale measurements. Reverted to the gated approach;
   // game.js also re-measures each frame as a belt-and-braces backup.
-  simid.addEventListener('init', (env, creativeData) => {
+  simid.addEventListener('init', () => {
     log('Player:init handled');
-    // Re-create tracker with env-supplied AdParameters merged in.
+    // Build tracker from the seller's AdParameters (which contains the
+    // already-macro-replaced tracker URL) or from ?tracker= override.
+    // No identifiers hardcoded — they come from the DSP/SSP via macros.
     const adParams = simid.parseAdParameters();
     tracker = Tracker.fromEnvironment(adParams);
-    tracker.setContext({
-      creative_id: 'fruit-catch-v1',
-      creative_version: '0.9',
-      // Push useful environment context the DMP will want.
-      video_w:  env && env.videoDimensions    && env.videoDimensions.width,
-      video_h:  env && env.videoDimensions    && env.videoDimensions.height,
-      ad_w:     env && env.creativeDimensions && env.creativeDimensions.width,
-      ad_h:     env && env.creativeDimensions && env.creativeDimensions.height,
-      version:  env && env.version,
-      muted:    env && env.muted,
-    });
     tracker.event('simid_init');
   });
   simid.addEventListener('start',   onStart);

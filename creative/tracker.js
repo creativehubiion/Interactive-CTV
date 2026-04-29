@@ -1,100 +1,98 @@
 /**
- * iion DMP tracker integration. Fires fire-and-forget GET pings to the DMP
- * for every meaningful SIMID + gameplay event so we get full engagement
- * funnel data per impression in the DMP.
+ * iion DMP tracker integration. Fires fire-and-forget GET pings to a tracker
+ * URL provided per-impression by the DSP/SSP via VAST AdParameters.
  *
- * Usage:
- *   const tracker = new Tracker({
- *     baseUrl: '<tracker URL with pre-filled macros, ending in event_name= or no trailing event>',
- *     context: { creative_id: 'fruit-catch-v1', ... },
- *   });
- *   tracker.event('simid_init');
- *   tracker.event('fruit_catch', { item: '🍎' });
+ * **Zero hardcoded campaign/creative identifiers.** Everything that varies
+ * per impression (campaign_id, publisher_id, creative_id, IFA, IP, geo, etc.)
+ * is filled in by the seller's PLL macros (`%%campaignId%%` style) BEFORE
+ * the URL reaches the creative. The creative just appends `event_name=…` and
+ * any event-specific runtime data (score, glyph) to that pre-built URL.
  *
- * The base URL can be supplied either via:
- *   1. constructor opts.baseUrl
- *   2. SIMID creativeData.adParameters JSON: { "tracker_url": "..." }
- *      (parsed by simid-protocol.js' parseAdParameters())
- *   3. URL query parameter ?tracker= on the creative URL
- *   4. Built-in default (staging endpoint, fine for testing)
+ * Configuration sources (checked in order):
+ *   1. VAST <AdParameters> JSON: { "tracker_url": "<full URL ending in event_name=>" }
+ *      ← the standard production path; the DSP/SSP supplies the URL with
+ *        macros already substituted
+ *   2. Creative URL query string: ?tracker=<URL-encoded full tracker URL>
+ *      ← convenient for ad-hoc tests outside the RTB pipeline
+ *   3. None — the tracker is silently disabled (no events fire)
  *
- * Transport: uses `new Image().src = url` — works inside cross-origin
- * sandboxed iframes (which is what SIMID creatives are), bypasses CORS,
- * fire-and-forget, no buffering issues. Falls through to navigator.sendBeacon
- * when available for reliability on page-unload.
+ * Transport: `new Image().src = url` — works inside cross-origin sandboxed
+ * SIMID iframes, no CORS preflight, fire-and-forget. No request batching.
  */
 (function (global) {
   'use strict';
 
-  // Default base URL. Replace with production when ready, or override per
-  // campaign via AdParameters.tracker_url in the VAST tag.
-  const DEFAULT_BASE_URL =
-    'https://staging-dmp-producer.iion.io/tracker/impressions';
-
   class Tracker {
-    constructor(opts = {}) {
-      this.baseUrl  = opts.baseUrl || DEFAULT_BASE_URL;
-      this.context  = Object.assign({}, opts.context || {});
-      this.enabled  = opts.enabled !== false;
+    constructor(opts) {
+      opts = opts || {};
+      this.baseUrl = opts.baseUrl || '';
+      this.enabled = !!this.baseUrl;
       this.firedEvents = [];
     }
 
-    /** Merge context fields that get included on every event. */
-    setContext(ctx) {
-      Object.assign(this.context, ctx || {});
-    }
-
     /**
-     * Fire an event. `name` is short snake_case; `params` is event-specific
-     * data that gets merged with the running context. The event is always
-     * recorded locally in firedEvents[] regardless of enabled state, so
-     * the HUD can display it.
+     * Fire one event. `name` is short snake_case (e.g. "simid_init",
+     * "fruit_catch"); `params` is event-specific runtime data only —
+     * NEVER pass campaign/creative identifiers here, those belong in
+     * the URL template via macros.
      */
     event(name, params) {
       params = params || {};
-      const ts = Date.now();
-      const record = { ts, name, params };
+      const record = { ts: Date.now(), name, params };
       this.firedEvents.push(record);
       if (this.firedEvents.length > 200) this.firedEvents.shift();
+
+      // Show on the on-screen HUD regardless of whether a tracker URL is
+      // configured — useful for debugging.
       if (window.HUD && typeof window.HUD.info === 'function') {
         const summary = Object.keys(params).length
           ? ' ' + JSON.stringify(params).slice(0, 80)
           : '';
         window.HUD.info('📡 ' + name + summary);
       }
+
       if (!this.enabled) return;
-      const url = this._buildUrl(name, params);
-      this._fire(url);
+      this._fire(this._buildUrl(name, params));
     }
 
+    /**
+     * Construct the final URL to fire. Preserves the seller's URL exactly
+     * as supplied — does not URL-encode unfilled macros, does not rewrite
+     * existing query parameters.
+     *
+     * The standard iion tracker template ends with `&event_name=` (or
+     * `?event_name=`). We detect that and just concatenate the event name.
+     * Otherwise we add `&event_name=<value>` to the end.
+     *
+     * Event-specific runtime params (e.g. score, glyph) are appended last.
+     */
     _buildUrl(eventName, params) {
-      const merged = Object.assign({}, this.context, params, { event_name: eventName });
-      // If the base URL already has a query string with macros (typical for
-      // the iion tracker template), append our params with &.  Otherwise
-      // start a fresh querystring with ?.
-      const sep = this.baseUrl.indexOf('?') === -1 ? '?' : '&';
-      const qs = Object.keys(merged)
-        .filter(k => merged[k] !== undefined && merged[k] !== null)
-        .map(k => encodeURIComponent(k) + '=' + encodeURIComponent(String(merged[k])))
-        .join('&');
-      // Preserve any unfilled macros (%%xxx%%) — those are placeholders that
-      // the SSP would normally fill server-side; if they reach us literally
-      // it just means a direct creative test.
-      return this.baseUrl + sep + qs;
+      let url = this.baseUrl;
+      const trailingEventNameMatch = url.match(/[?&]event_name=$/);
+      if (trailingEventNameMatch) {
+        url += encodeURIComponent(eventName);
+      } else if (/[?&]event_name=/.test(url)) {
+        // event_name already has a value — replace it (defensive)
+        url = url.replace(/([?&])event_name=[^&]*/, '$1event_name=' + encodeURIComponent(eventName));
+      } else {
+        url += (url.indexOf('?') === -1 ? '?' : '&') + 'event_name=' + encodeURIComponent(eventName);
+      }
+      // Append any event-specific runtime params.
+      for (const k of Object.keys(params)) {
+        const v = params[k];
+        if (v === undefined || v === null) continue;
+        url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(String(v));
+      }
+      return url;
     }
 
     _fire(url) {
-      // Image-pixel transport — most universal across CTV WebViews.
       try {
         const img = new Image(1, 1);
         img.referrerPolicy = 'no-referrer-when-downgrade';
-        img.onload  = function () { /* delivered */ };
-        img.onerror = function () { /* swallow — fire-and-forget */ };
         img.src = url;
         return;
       } catch (_) { /* fall through */ }
-      // Fallback: sendBeacon (only in browsers, ignored on most CTV WebViews
-      // but harmless).
       try {
         if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
           navigator.sendBeacon(url);
@@ -102,22 +100,21 @@
       } catch (_) { /* swallow */ }
     }
 
-    /** Convenience constructor that pulls overrides from URL + AdParameters. */
+    /**
+     * Build a Tracker by pulling the URL from (in order):
+     *   1. AdParameters.tracker_url  (parsed from SIMID creativeData)
+     *   2. ?tracker=<urlencoded> on the creative URL
+     *   3. nothing — disabled
+     */
     static fromEnvironment(adParametersObj) {
-      const params = new URLSearchParams(window.location.search);
-      const fromQuery = params.get('tracker');
-      const fromAd    = adParametersObj && adParametersObj.tracker_url;
-      const baseUrl   = fromAd || fromQuery || undefined;
-      const context = {};
-      if (adParametersObj) {
-        // Pass through any campaign-specific context the seller put in
-        // AdParameters: campaign_id, line_item, creative_id, etc.
-        for (const k of Object.keys(adParametersObj)) {
-          if (k === 'tracker_url') continue;
-          context[k] = adParametersObj[k];
-        }
-      }
-      return new Tracker({ baseUrl, context });
+      const fromAd = adParametersObj && adParametersObj.tracker_url;
+      let fromQuery = '';
+      try {
+        const params = new URLSearchParams(window.location.search);
+        fromQuery = params.get('tracker') || '';
+      } catch (_) {}
+      const baseUrl = fromAd || fromQuery || '';
+      return new Tracker({ baseUrl });
     }
   }
 

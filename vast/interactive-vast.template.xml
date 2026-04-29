@@ -43,7 +43,7 @@
                 https://storage.googleapis.com/interactive-media-ads/media/android.mp4
               </MediaFile>
               <InteractiveCreativeFile type="text/html" apiFramework="SIMID" variableDuration="true">
-                ${BASE_URL}/creative/index.html?v=4
+                ${BASE_URL}/creative/index.html?v=5
               </InteractiveCreativeFile>
             </MediaFiles>
           </Linear>

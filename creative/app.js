@@ -156,8 +156,11 @@
     log(`Teardown: ${reason}`);
     // Restore audio so the next ad in the pod isn't muted.
     simid.changeVolume(1, false).catch(() => {});
-    simid.requestPlay().catch(() => {});
-    simid.requestStop(reason).catch(() => {});
+    // Use Creative:requestSkip — Google's reference uses this for
+    // user-initiated dismissal. Creative:requestStop on IMA Android 3.30.3
+    // can be interpreted as "creative crashed, retry from top" and trigger
+    // an ad restart loop. requestSkip ends the ad cleanly.
+    simid.requestSkip().catch(() => {});
   }
 
   // -------- Input ----------------------------------------------------------

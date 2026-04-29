@@ -73,23 +73,28 @@ html, body {
 .timer-box span:not(.label) { color: var(--accent); }
 
 .skip-btn {
-  padding: 1vh 1.6vw;
-  font: 700 2vh 'Helvetica Neue', Arial, sans-serif;
+  padding: 1.2vh 2vw;
+  font: 800 2.2vh 'Helvetica Neue', Arial, sans-serif;
   letter-spacing: 0.1em;
   color: var(--text);
-  background: rgba(0, 0, 0, 0.45);
-  border: 2px solid rgba(255, 255, 255, 0.4);
-  border-radius: 0.6vh;
+  background: rgba(0, 0, 0, 0.55);
+  border: 3px solid rgba(255, 255, 255, 0.45);
+  border-radius: 0.8vh;
   cursor: pointer;
   outline: none;
-  transition: transform 150ms ease, border-color 150ms ease, background 150ms ease;
 }
+/* Focused state: dramatic, can't-miss-it on a TV from 10 ft away. */
 .skip-btn:focus,
 .skip-btn.focused {
-  border-color: var(--focus);
-  background: rgba(255, 216, 77, 0.18);
-  transform: scale(1.06);
-  box-shadow: 0 0 3vh rgba(255, 216, 77, 0.4);
+  background: var(--accent);
+  color: #1a0d33;
+  border-color: #ffffff;
+  border-width: 4px;
+  transform: scale(1.18);
+  box-shadow: 0 0 0 4px rgba(255, 216, 77, 0.5),
+              0 0 5vh rgba(255, 216, 77, 0.7);
+  outline: 4px solid #ffffff;
+  outline-offset: 4px;
 }
 
 /* ---- Game field --------------------------------------------------------- */

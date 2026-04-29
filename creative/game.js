@@ -24,8 +24,12 @@
   const FALL_MIN_PX_PER_S = 180;
   const FALL_MAX_PX_PER_S = 290;
   const PLAYER_SPEED_PX_PER_S = 900;
+  // Emoji choices intentionally limited to Emoji 1.0–3.0 era (2014-2015)
+  // glyphs so older Android/Fire OS bundled emoji fonts render every
+  // item. 🪨 (Emoji 13.0, 2020) and 🧺 (11.0, 2018) showed as tofu on
+  // Fire OS 7 — basket is now an inline SVG, bombs only.
   const GOOD_ITEMS = ['🍎', '🍓', '🍇', '🍌', '🥝', '🍑', '🍊'];
-  const BAD_ITEMS  = ['💣', '🪨'];
+  const BAD_ITEMS  = ['💣'];
   const BAD_PROB   = 0.18;
 
   // ---- Synthesized SFX -----------------------------------------------------

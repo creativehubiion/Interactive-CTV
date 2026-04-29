@@ -34,7 +34,25 @@
 
     <!-- Game field — falling items + player live here. -->
     <div id="field" class="field">
-      <div id="player" class="player">🧺</div>
+      <!--
+        Basket — inline SVG so we don't depend on the device emoji font.
+        Fire OS 7's bundled emoji font is missing 🧺 (Emoji 11.0, 2018);
+        fruits (Emoji 1.0–3.0) render fine, basket showed as tofu.
+      -->
+      <svg id="player" class="player" viewBox="0 0 120 100" aria-label="Basket">
+        <!-- Handle -->
+        <path d="M 30 35 Q 60 0 90 35"
+              fill="none" stroke="#6b3a16" stroke-width="6" stroke-linecap="round"/>
+        <!-- Basket body (woven look via repeated lines) -->
+        <path d="M 12 35 L 108 35 L 96 92 Q 60 100 24 92 Z"
+              fill="#a0521e" stroke="#5a2e0d" stroke-width="3"/>
+        <!-- Rim -->
+        <ellipse cx="60" cy="35" rx="48" ry="8" fill="#d28653" stroke="#5a2e0d" stroke-width="3"/>
+        <!-- Weave lines -->
+        <path d="M 18 50 Q 60 56 102 50" fill="none" stroke="#5a2e0d" stroke-width="2" opacity="0.85"/>
+        <path d="M 21 65 Q 60 72  99 65" fill="none" stroke="#5a2e0d" stroke-width="2" opacity="0.85"/>
+        <path d="M 25 80 Q 60 87  95 80" fill="none" stroke="#5a2e0d" stroke-width="2" opacity="0.85"/>
+      </svg>
     </div>
 
     <!-- Instruction strip at the bottom. Fades after first input. -->

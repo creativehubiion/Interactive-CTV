@@ -1348,6 +1348,137 @@ ground truth for actual rendering rates regardless of bid signals.
 
 ---
 
+## 22b. SIMID signaling architecture — consolidated lessons
+
+This consolidates the analysis of iion's Limelight setup, with three
+real bid request samples (LG webOS, Roku, Fire TV).
+
+### The 3-leg ad flow (URL VAST integration)
+
+```
+Leg 1: Ad request          Leg 2: Bid request        Leg 3: VAST response
+Publisher's SDK → SSP      SSP → DSPs                DSP/SSP → Publisher
+─────────────────────      ──────────────────        ──────────────────
+URL with macros filled:    OpenRTB JSON:             VAST XML body:
+  ifa=...&ip=...             "imp": [{ "video":         <VAST><Ad>
+  &display_manager=...         { "api": [...], }       <MediaFile>...
+                               } ]
+```
+
+Publishers don't directly fill `imp.video.api` anywhere — Leg 2 is
+where the field lives, and the SSP has to put it there.
+
+### OpenRTB defines vocabulary, not who fills fields
+
+OpenRTB 2.6 spec defines:
+- ✅ `imp.video.api` is an array of integers; code 8 = SIMID
+- ❌ The spec does NOT define who must populate the field
+
+`api: [8]` in a real bid request only exists because some actor in the
+chain put it there. The spec defines the convention, not the
+mechanism. For iion's URL integration:
+
+| Source | Status today |
+|---|---|
+| Publisher SDK declares via S2S OpenRTB | ❌ iion uses URL integration, not S2S |
+| Publisher fills `&api=` in URL | ❌ URL spec has no api parameter |
+| Limelight per-tag admin UI config | 🟡 Likely exists in Video Ad Unit form (api: [2] in their public example proves it once worked); supply team to verify |
+| Limelight infers from `device.os` | ❌ Not currently doing this |
+| Limelight infers from `display_manager` | ❌ display_manager comes through empty |
+
+All five inactive → all three sampled bid requests have `api` missing.
+
+### URL macros standardize runtime data, NOT capability declarations
+
+Standard URL macros that every SDK auto-fills: `[IFA]`, `[IP]`, `[UA]`,
+`[APP_BUNDLE]`, `[CACHEBUSTER]`, `[GDPR]`, etc. These cover device /
+runtime context.
+
+There is no standard URL macro for capability declarations. Capability
+info was designed into OpenRTB S2S, not URL VAST. SDKs don't auto-fill
+`api` or `display_manager` via URL templates — both require manual
+hardcoding by publishers if used in URL mode.
+
+### Multi-app publisher scaling problem (verified)
+
+Real example from iion's bid stream:
+- tagid **42191** served `ben_azelart` on LG webOS 3.0
+- tagid **42191** also served `jordan_matter` on Fire TV / Fire OS 6.0
+- Same publisher (10243), SAME TAG, completely different platforms
+
+A single static `api` value on tag 42191 is wrong for one of those two
+apps no matter what you set. Most CTV publishers operate portfolios:
+same channel × 5+ platforms. Per-tag api config breaks down at this
+scale.
+
+### Why display_manager isn't easier than api at scale
+
+For URL integrations, both require per-app hardcoding across N
+codebases × N app stores. Each app's player config has the VAST URL as
+a string. Updating display_manager means editing N codebases and
+pushing N store updates (Roku ~3 days, Amazon ~1 week, Samsung ~2
+weeks). Multi-app publishers won't do it; values stale on SDK upgrades.
+
+display_manager IS easy in OpenRTB S2S mode (SDKs auto-populate it),
+but moving publishers from URL VAST to S2S is months of work, not a
+shortcut.
+
+### The only path that scales: SSP-side device inference
+
+Every bid request iion receives already carries `device.os` and
+`device.make`. Limelight can run inference at request time:
+
+```
+function inferApi(device) {
+  if device.os in {Android, Fire OS} && device.make in {Amazon, Google, TCL, Sony}:
+    return [7, 8]
+  if device.os in {Roku OS}: return []
+  if device.os in {tvOS}: return [7]
+  if device.os in {webOS TV, Tizen} && chromiumVersion ≥ 79: return [7, 8]
+  return []
+}
+```
+
+Same shared tag declares different api per impression based on device
+fields. Zero publisher cooperation, auto-correct as portfolios grow,
+no staleness, covers ~95% correctly.
+
+### Tactical sequencing for iion
+
+1. **Quick fix** (now, zero publisher cooperation): platform-based api
+   inference at SSP — engineering ticket to Limelight.
+2. **Mid-term** (when leveraging publisher relationships): layer in
+   display_manager from publishers who'll populate it. Accuracy
+   refinement.
+3. **Long-term** (premium publishers only): OpenRTB S2S integration —
+   unlocks full SDK auto-population.
+
+Step 1 unblocks SIMID inventory signaling. 2 and 3 are refinements.
+
+### Final-form Limelight engineering ticket
+
+> **Title**: Add platform-based imp.video.api inference to outbound bid requests
+>
+> **Body**: Limelight's outbound DSP bid requests currently omit
+> `imp.video.api` entirely (verified across 3 platform samples — LG
+> webOS, Roku, Fire TV — all missing). The publisher-facing endpoint
+> is URL-based with no api parameter; SDK auto-population of api/
+> display_manager doesn't apply to URL VAST mode; per-tag config can't
+> work for portfolio publishers (tagid 42191 already serves both LG
+> webOS and Fire TV apps under publisher 10243).
+>
+> Add device-based api inference at outbound bid build time:
+> - {Android, Fire OS} + {Amazon, Google, TCL, Sony, ...} → [7, 8]
+> - {Roku OS} → []
+> - {tvOS} → [7]
+> - {webOS TV, Tizen} + Chromium ≥ 79 → [7, 8]; else []
+> - default → []
+>
+> Required to unlock SIMID inventory signaling for interactive ad
+> campaigns.
+
+---
+
 ## 22. Open items / decisions deferred
 
 These were active topics and should be picked back up when relevant:

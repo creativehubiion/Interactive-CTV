@@ -1,9 +1,20 @@
 # Interactive CTV — Remote-Controlled SIMID VAST
 
-A reference SIMID 1.1 interactive creative + VAST 4.2 tag for Connected TV.
-Designed to be ad-served and rendered on Fire TV via Google's IMA SDK
-inside an ExoPlayer host app, and controllable with the TV remote (D-pad +
-OK + Back).
+A reference SIMID 1.1 interactive creative + VAST **3.0** tag for Connected
+TV. Verified rendering on **Fire TV via Google's IMA Android SDK 3.30.3**
+inside an ExoPlayer demo host, and controllable with the TV remote
+(D-pad + OK).
+
+**📘 Read [`docs/KNOWLEDGE-BASE.md`](docs/KNOWLEDGE-BASE.md) before working
+on this project.** It captures the SIMID wire format as IMA actually
+implements it (which differs from the spec text in important ways), the
+exact VAST shape that works, every bug we hit and how we fixed it, and
+the Fire TV testbed recipe. Don't relearn what's in there.
+
+**Live URLs:**
+- Production VAST tag: `https://creativehubiion.github.io/Interactive-CTV/vast/interactive-vast.xml`
+- Standalone test host (no IMA): `https://creativehubiion.github.io/Interactive-CTV/test/simid-test-host.html`
+- Repo: <https://github.com/creativehubiion/Interactive-CTV>
 
 ## What's in here
 

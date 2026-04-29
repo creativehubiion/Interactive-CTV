@@ -1216,6 +1216,58 @@ either:
 inference as baseline (covers ~95% correctly), with optional
 supply-team / URL / display-manager overrides for the rest.
 
+### Why per-tag config breaks down for multi-app publishers
+
+Verified from iion's own data: tagid 42191 served BOTH `ben_azelart` (on
+LG webOS 3.0) AND `jordan_matter` (on Fire TV / Fire OS 6.0) — same
+tagid, same publisher 10243, but two completely different platforms with
+completely different api capabilities. **A single static `api` value on
+that tag is wrong for one of those two apps no matter what you set.**
+
+Most CTV publishers operate portfolios:
+
+```
+Publisher: Future Today Inc
+  ├── fawesome.tv on Roku     (RAF — no SIMID)
+  ├── fawesome.tv on Fire TV  (IMA Android — SIMID yes)
+  ├── fawesome.tv on Samsung  (Samsung Ads SDK — usually no)
+  ├── fawesome.tv on LG       (LG Ads SDK — usually no)
+  └── 50+ other channels × 5+ platforms each
+```
+
+Asking publishers for "supported api per app" doesn't scale — it's a
+survey project they won't complete, and they often don't know their own
+SDK configurations because development is outsourced.
+
+**The only thing that DOES scale across multi-app publishers**:
+inference at the SSP layer using `device.os` + `device.make` from each
+bid request. Same shared tagid can correctly declare different api
+arrays for different impressions because the device fields differ per
+request, even when the tag config is shared.
+
+```
+if device.os in ('Fire OS', 'Android') and device.make in ('Amazon', 'Google', ...):
+    api = [7, 8]
+elif device.os in ('Roku OS', 'tvOS'):
+    api = []
+else:
+    api = []   // conservative default
+```
+
+This works without any per-tag or per-publisher capability surveys,
+handles new apps a publisher launches without notice, and stays
+correct as platform capabilities evolve.
+
+The properly-scoped engineering ask to Limelight is therefore:
+
+> "Add automatic platform-based `imp.video.api` inference to outbound
+> bid requests. Map `device.os` × `device.make` → api array per a
+> system-wide table. This declares api correctly per-impression
+> regardless of tag/publisher structure."
+
+NOT: "let supply team set api per tag" — that doesn't scale and gives
+wrong answers for any publisher with apps on multiple platforms.
+
 **Why not just add a custom `&api=` URL macro?**
 Technically you can, but it's not an industry standard. URL macros are
 standardized for **runtime data** the SDK knows at request time

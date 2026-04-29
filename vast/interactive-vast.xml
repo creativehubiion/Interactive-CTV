@@ -37,10 +37,10 @@
               <ClickTracking><![CDATA[https://creativehubiion.github.io/Interactive-CTV/track/click]]></ClickTracking>
             </VideoClicks>
             <MediaFiles>
-              <MediaFile id="mp4-480p" delivery="progressive" type="video/mp4"
-                         width="854" height="480" bitrate="800"
+              <MediaFile id="mp4-720p" delivery="progressive" type="video/mp4"
+                         width="1280" height="720" bitrate="2000"
                          scalable="true" maintainAspectRatio="true">
-                <![CDATA[https://download.blender.org/durian/trailer/sintel_trailer-480p.mp4]]>
+                <![CDATA[https://storage.googleapis.com/interactive-media-ads/media/android.mp4]]>
               </MediaFile>
               <InteractiveCreativeFile type="text/html" apiFramework="SIMID" variableDuration="true">
                 <![CDATA[https://creativehubiion.github.io/Interactive-CTV/creative/index.html?debug=1]]>

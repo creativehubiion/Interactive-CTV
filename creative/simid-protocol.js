@@ -71,7 +71,21 @@
       this._environmentData = null;       // from Player:init
       this._creativeData    = null;       // from Player:init (incl. AdParameters)
 
-      window.addEventListener('message', this._onMessage.bind(this));
+      const onMsg = this._onMessage.bind(this);
+      window.addEventListener('message', onMsg);
+
+      // Drain any messages that arrived before this script loaded.
+      // The early-bird inline script in <head> captures every postMessage
+      // into __simidEarlyBuffer; replay them here through our normal handler
+      // so listeners see them in order.
+      if (Array.isArray(global.__simidEarlyBuffer)) {
+        const buf = global.__simidEarlyBuffer.splice(0, global.__simidEarlyBuffer.length);
+        for (const ev of buf) onMsg(ev);
+      }
+      if (typeof global.__simidEarlyHandler === 'function') {
+        window.removeEventListener('message', global.__simidEarlyHandler, true);
+        global.__simidEarlyHandler = null;
+      }
 
       // Auto-handle Player:init -> resolve.
       this.on(PlayerMessage.INIT, (data, msg) => {

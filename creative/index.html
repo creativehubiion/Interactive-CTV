@@ -5,6 +5,25 @@
   <meta name="viewport" content="width=1920, initial-scale=1, user-scalable=no" />
   <title>Interactive CTV Ad</title>
   <link rel="stylesheet" href="styles.css" />
+
+  <!--
+    Early-bird message buffer. The iframe may receive SIMID:Player:init
+    from IMA *before* our external scripts finish loading on slow CTV
+    WebViews (Fire Stick gen 1/2 take 200-500ms to fetch 3 external JS
+    files). If we miss init, IMA never resolves and the iframe stays
+    hidden. This inline script runs synchronously while the document
+    parses and captures every postMessage into a buffer that
+    simid-protocol.js drains as soon as it loads.
+  -->
+  <script>
+    (function () {
+      window.__simidEarlyBuffer = [];
+      window.__simidEarlyHandler = function (event) {
+        window.__simidEarlyBuffer.push({ data: event.data, source: event.source, origin: event.origin });
+      };
+      window.addEventListener('message', window.__simidEarlyHandler, true);
+    })();
+  </script>
 </head>
 <body>
   <div id="stage" class="stage" aria-hidden="true">

@@ -81,6 +81,7 @@
     () => probe('Creative:requestResize [btn]',        simid.send('SIMID:Creative:requestResize', {
       videoDimensions:    { x: 0, y: 0, width: 1056, height: 1080 },
       creativeDimensions: { x: 0, y: 0, width: 1920, height: 1080 },
+      viewMode: 'normal',
     })),
   ];
 

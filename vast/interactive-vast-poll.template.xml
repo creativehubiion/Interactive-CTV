@@ -42,7 +42,7 @@
                 ${BASE_URL}/creative/poll/assets/video.mp4
               </MediaFile>
               <InteractiveCreativeFile type="text/html" apiFramework="SIMID" variableDuration="true">
-                ${BASE_URL}/creative/poll/index.html?v=6
+                ${BASE_URL}/creative/poll/index.html?v=7
               </InteractiveCreativeFile>
             </MediaFiles>
           </Linear>

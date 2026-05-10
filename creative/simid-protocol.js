@@ -206,12 +206,13 @@
     }
 
     /**
-     * Spec arg shape is `{ event }` per IAB SIMID 1.1, NOT `{ eventName }`.
-     * IMA HTML5 rejects unknown fields with errorCode 1211.
+     * Per Google's IMA reference creative the args are `{ eventName, params }`
+     * with params always present (even if empty). IMA HTML5 rejected `{ event }`
+     * with errorCode 1211 — so we revert to the Google-flavored shape and always
+     * send a params object.
      */
-    reportTracking(event, params)  {
-      const args = params ? { event, params } : { event };
-      return this.send(CreativeMessage.REPORT_TRACKING, args);
+    reportTracking(eventName, params)  {
+      return this.send(CreativeMessage.REPORT_TRACKING, { eventName, params: params || {} });
     }
 
     /** Subscribe to lifecycle events emitted by this wrapper. */

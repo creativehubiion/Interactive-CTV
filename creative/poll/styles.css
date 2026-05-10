@@ -198,19 +198,20 @@ html, body {
 /* ---- Debug HUD (TOP-LEFT, LARGE — for Fire TV visibility) ---------------- */
 .hud {
   position: fixed;
-  left: 1vw; top: 1vh;
-  width: 36vw;
-  max-height: 70vh;
-  background: rgba(0, 0, 0, 0.85);
+  left: 1vw; top: 1vh; bottom: 1vh;   /* fill almost full height of left half */
+  width: 50vw;
+  max-height: 96vh;
+  background: rgba(0, 0, 0, 0.88);
   color: #c8ffb9;
   border: 2px solid #3a5a2a;
   border-radius: 0.6vh;
   font-family: 'Consolas', 'Courier New', monospace;
-  font-size: 1.6vh;
+  font-size: 1.7vh;
   line-height: 1.35;
   z-index: 99999;
   display: none;
   flex-direction: column;
+  overflow: hidden;                   /* clip rounded corners */
 }
 .hud.visible { display: flex; }
 .hud-head {
@@ -252,10 +253,16 @@ html, body {
 }
 
 .hud-body {
-  flex: 1; overflow: hidden;
+  flex: 1;
+  overflow-y: auto;                   /* scroll so newest line is always visible */
   padding: 0.6vh 1vw;
   font-size: 1.5vh;
+  scrollbar-width: thin;
+  scrollbar-color: #3a5a2a rgba(0, 0, 0, 0.3);
 }
+.hud-body::-webkit-scrollbar { width: 0.6vw; }
+.hud-body::-webkit-scrollbar-thumb { background: #3a5a2a; border-radius: 0.3vh; }
+.hud-body::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); }
 .hud-row { white-space: pre-wrap; word-break: break-word; }
 .hud-row.lc-info  { color: #c8ffb9; }
 .hud-row.lc-key   { color: #ffe27a; }

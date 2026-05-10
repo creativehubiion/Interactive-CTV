@@ -195,13 +195,23 @@
      * with changeVolume(1, false) before requestStop so the next ad in the
      * pod isn't unintentionally muted.
      */
-    changeVolume(volume = 0, muted = true) {
-      return this.send('SIMID:Creative:requestChangeVolume', { volume, muted });
+    /**
+     * Spec arg shape is just `{ volume }` (0–1). Earlier we also sent a
+     * `muted` field but IMA HTML5 rejects with errorCode 1211 ("Invalid
+     * message arguments") when unknown fields are present, so we drop it.
+     * `muted = volume === 0` is implied — players treat 0 as muted.
+     */
+    changeVolume(volume = 0) {
+      return this.send('SIMID:Creative:requestChangeVolume', { volume });
     }
 
-    /** Fire a tracking macro defined in the VAST tag. */
-    reportTracking(eventName, params)  {
-      return this.send(CreativeMessage.REPORT_TRACKING, { eventName, params });
+    /**
+     * Spec arg shape is `{ event }` per IAB SIMID 1.1, NOT `{ eventName }`.
+     * IMA HTML5 rejects unknown fields with errorCode 1211.
+     */
+    reportTracking(event, params)  {
+      const args = params ? { event, params } : { event };
+      return this.send(CreativeMessage.REPORT_TRACKING, args);
     }
 
     /** Subscribe to lifecycle events emitted by this wrapper. */

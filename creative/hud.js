@@ -30,7 +30,7 @@
 
   if (!hudEl || !bodyEl) return;
 
-  const MAX_ROWS = 30;
+  const MAX_ROWS = 80;       // bigger ring buffer; HUD scrolls so all stay reachable
   const log = [];
   let bootTime = Date.now();
 
@@ -49,6 +49,8 @@
     bodyEl.innerHTML = log
       .map(r => `<div class="hud-row lc-${r.level}"><span class="ts">${r.ts}</span>${escape(r.text)}</div>`)
       .join('');
+    // Always pin to the latest line so newest events are visible.
+    bodyEl.scrollTop = bodyEl.scrollHeight;
   }
 
   function escape(s) {

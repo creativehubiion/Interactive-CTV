@@ -16,13 +16,13 @@
 (function (global) {
   'use strict';
 
-  // HUD is on by default. Disable with ?debug=0 once you've verified the
-  // pipeline end-to-end and you want the iframe overlay to be production-clean.
-  // ?debug=verbose adds keydown + focus auto-logging on top — too noisy for
-  // protocol-level diagnostics so it's opt-in.
+  // HUD is OFF by default for production. Append ?debug=1 to the iframe URL
+  // to enable it for development / QA. ?debug=verbose additionally enables
+  // keydown + focus auto-logging (very noisy — opt-in only).
   const params = new URLSearchParams(location.search);
-  const forced  = params.get('debug') !== '0';
-  const verbose = params.get('debug') === 'verbose';
+  const debugParam = params.get('debug');
+  const forced  = debugParam === '1' || debugParam === 'verbose';
+  const verbose = debugParam === 'verbose';
 
   const hudEl   = document.getElementById('hud');
   const bodyEl  = document.getElementById('hud-body');

@@ -3,14 +3,19 @@
  * iframe. Layout: transparent left half (linear video bleeds through),
  * opaque poll panel on the right.
  *
- * Includes a debug HUD (top-left) that auto-fires Creative:requestPause +
- * Creative:requestChangeVolume on startCreative AND exposes manual
- * triggers via remote keys 1/2/3 — so we can verify whether IMA
- * Android 3.30.3 honours them and (per KB §17) capture the resolve /
- * reject reply.
+ * Production: auto-fires Creative:requestPause on startCreative as a
+ * best-effort UX improvement (honoured on most browser players, silently
+ * dropped on IMA Android 3.30.3 — see KB §17).
+ *
+ * Append ?debug=1 to the iframe URL to enable the debug HUD, manual
+ * pause/mute/resize probes (remote keys 1/2/3 + LEFT/RIGHT pane switch),
+ * and verbose protocol logging.
  */
 (function () {
   'use strict';
+
+  const isDebug = new URLSearchParams(location.search).get('debug') === '1' ||
+                  new URLSearchParams(location.search).get('debug') === 'verbose';
 
   const KEY = {
     LEFT:  ['ArrowLeft',  37],
@@ -112,7 +117,7 @@
   function onStart() {
     if (started) return;
     started = true;
-    log('▶ poll active · auto-firing pause / mute / resize probes…');
+    log('▶ poll active');
     tracker.event('simid_start');
     showStage();
     armInactivity();
@@ -121,15 +126,23 @@
     tracker.event('poll_view');
     requestAnimationFrame(() => focusRow(0));
 
-    // Auto-fire the three SIMID requests we want to diagnose. Each promise
-    // will resolve (player accepted) or reject (player refused) and the
-    // result lands in the HUD.
-    setTimeout(() => probe('Creative:requestPause',         simid.requestPause()),                500);
-    setTimeout(() => probe('Creative:requestChangeVolume',  simid.changeVolume(0, true)),         900);
-    setTimeout(() => probe('Creative:requestResize · left', simid.send('SIMID:Creative:requestResize', {
-      videoDimensions:    { x: 0, y: 0, width: 1056, height: 1080 },  // 55% of 1920
-      creativeDimensions: { x: 0, y: 0, width: 1920, height: 1080 },
-    })), 1300);
+    // Best-effort: ask the player to pause the linear so the user can focus
+    // on the poll. Honoured on browser players (IMA HTML5, IAB ref) — linear
+    // freezes for the duration of the interaction. Silently no-op on IMA
+    // Android (linear keeps playing under the overlay — see KB §17).
+    setTimeout(() => simid.requestPause().catch(() => {}), 500);
+
+    // Debug-only: diagnostic probes for requestChangeVolume + requestResize.
+    // Both are universally rejected per testing — kept here so a debug run
+    // can capture the rejection patterns in the HUD without polluting prod.
+    if (isDebug) {
+      setTimeout(() => probe('Creative:requestChangeVolume',  simid.changeVolume(0)), 900);
+      setTimeout(() => probe('Creative:requestResize · left', simid.send('SIMID:Creative:requestResize', {
+        videoDimensions:    { x: 0, y: 0, width: 1056, height: 1080 },  // 55% of 1920
+        creativeDimensions: { x: 0, y: 0, width: 1920, height: 1080 },
+        viewMode: 'normal',
+      })), 1300);
+    }
   }
 
   function showStage() {
@@ -214,11 +227,17 @@
       return;
     }
 
-    // Pane switching: LEFT moves to HUD column, RIGHT moves back to poll.
-    if (matchKey(e, KEY.LEFT))  { focusHud(hudIdx);   e.preventDefault(); return; }
-    if (matchKey(e, KEY.RIGHT)) { focusRow(pollIdx);  e.preventDefault(); return; }
+    // Debug-only: pane-switch (LEFT/RIGHT) + 1/2/3 manual probes.
+    if (isDebug) {
+      if (matchKey(e, KEY.LEFT))  { focusHud(hudIdx);   e.preventDefault(); return; }
+      if (matchKey(e, KEY.RIGHT)) { focusRow(pollIdx);  e.preventDefault(); return; }
+      if (matchKey(e, KEY.NUM_1)) { hudActions[0](); e.preventDefault(); return; }
+      if (matchKey(e, KEY.NUM_2)) { hudActions[1](); e.preventDefault(); return; }
+      if (matchKey(e, KEY.NUM_3)) { hudActions[2](); e.preventDefault(); return; }
+    }
 
-    // Up/Down navigates within whichever pane is active.
+    // Up/Down navigates within whichever pane is active (HUD pane only
+    // possible in debug mode; in production it's always the poll pane).
     if (matchKey(e, KEY.UP)) {
       pane === 'hud' ? focusHud(hudIdx - 1) : focusRow(pollIdx - 1);
       e.preventDefault(); return;
@@ -235,18 +254,13 @@
       e.preventDefault();
       return;
     }
-
-    // 1/2/3 number-key shortcuts — fire pause/mute/resize from anywhere
-    // (works with USB keyboard plugged into Fire TV; Fire remote may not
-    // have number keys).
-    if (matchKey(e, KEY.NUM_1)) { hudActions[0](); e.preventDefault(); return; }
-    if (matchKey(e, KEY.NUM_2)) { hudActions[1](); e.preventDefault(); return; }
-    if (matchKey(e, KEY.NUM_3)) { hudActions[2](); e.preventDefault(); return; }
   });
 
   // Click fallback (desktop testing).
   opts.forEach(o => o.addEventListener('click', () => selectAndSubmit(o)));
-  hudBtns.forEach((el, i) => el.addEventListener('click', () => hudActions[i]()));
+  if (isDebug) {
+    hudBtns.forEach((el, i) => el.addEventListener('click', () => hudActions[i]()));
+  }
 
   // Kick off the SIMID handshake.
   simid.createSession();

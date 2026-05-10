@@ -180,36 +180,6 @@ html, body {
   letter-spacing: 0.02em;
 }
 
-.submit-btn {
-  margin-top: 2vh;
-  padding: 2vh 2vw;
-  background: var(--submit-bg);
-  border: 2px solid var(--opt-border);
-  border-radius: 1vh;
-  color: var(--text-dim);
-  font-weight: 800;
-  font-size: 2.4vh;
-  letter-spacing: 0.15em;
-  cursor: pointer;
-  outline: none;
-  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease, color 120ms ease;
-}
-.submit-btn[disabled] {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.submit-btn:not([disabled]) {
-  color: var(--text);
-}
-.submit-btn:focus,
-.submit-btn.focused {
-  background: var(--submit-bg-focus);
-  color: #0a1838;
-  border-color: #ffffff;
-  transform: scale(1.04);
-  box-shadow: 0 0 3vh rgba(91, 158, 255, 0.5);
-}
-
 /* ---- "Thanks for voting" overlay ----------------------------------------- */
 .thanks {
   position: absolute; inset: 0;

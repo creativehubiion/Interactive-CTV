@@ -40,14 +40,14 @@
 
   // -------- DOM ------------------------------------------------------------
   const stage      = document.getElementById('stage');
-  const submitBtn  = document.getElementById('submit-btn');
   const thanks     = document.getElementById('thanks');
   const thanksTitle= document.getElementById('thanks-title');
   const thanksBody = document.getElementById('thanks-body');
 
-  // The 5 poll options + the submit button form a single navigable column.
-  const opts = Array.from(document.querySelectorAll('.opt'));
-  const navList = opts.concat([submitBtn]);   // 6 focusable rows total
+  // 5 poll options form the navigable column. Pressing OK on one
+  // is the vote — there is no separate submit button.
+  const opts    = Array.from(document.querySelectorAll('.opt'));
+  const navList = opts;
 
   // -------- SIMID lifecycle ------------------------------------------------
   simid.addEventListener('init', () => {
@@ -131,26 +131,17 @@
     try { navList[idx].focus(); } catch (_) {}
   }
 
-  function selectOption(opt) {
+  function selectAndSubmit(opt) {
+    if (selectedValue !== null) return;     // single-vote: ignore further OKs
     const v = parseInt(opt.dataset.value, 10);
     selectedValue = v;
     opts.forEach(o => o.classList.toggle('selected', o === opt));
-    submitBtn.disabled = false;
-    log(`Option selected: ${v}`);
-    tracker.event('poll_select', { option: v });
-  }
-
-  function submitVote() {
-    if (!selectedValue) {
-      log('Submit pressed with no selection — ignoring');
-      return;
-    }
-    log(`Vote submitted: ${selectedValue}`);
-    tracker.event('poll_vote', { option: selectedValue });
-    simid.reportTracking('select', { id: 'option-' + selectedValue }).catch(() => {});
+    log(`Vote: ${v}`);
+    tracker.event('poll_vote', { option: v });
+    simid.reportTracking('select', { id: 'option-' + v }).catch(() => {});
 
     thanksTitle.textContent = `Thanks for voting!`;
-    thanksBody.textContent  = `You picked option ${selectedValue}. Returning you to your show…`;
+    thanksBody.textContent  = `You picked option ${v}. Returning you to your show…`;
     thanks.classList.remove('hidden');
 
     setTimeout(() => teardown('vote-submitted'), 2000);
@@ -174,20 +165,14 @@
     if (matchKey(e, KEY.DOWN)) { focusRow(focusedIdx + 1); e.preventDefault(); return; }
 
     if (matchKey(e, KEY.OK)) {
-      const el = navList[focusedIdx];
-      if (el === submitBtn) {
-        submitVote();
-      } else {
-        selectOption(el);
-      }
+      selectAndSubmit(navList[focusedIdx]);
       e.preventDefault();
       return;
     }
   });
 
   // Click fallback for desktop testing.
-  opts.forEach(o => o.addEventListener('click', () => selectOption(o)));
-  submitBtn.addEventListener('click', () => submitVote());
+  opts.forEach(o => o.addEventListener('click', () => selectAndSubmit(o)));
 
   // Kick off the SIMID handshake.
   simid.createSession();

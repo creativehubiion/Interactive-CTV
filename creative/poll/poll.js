@@ -1,14 +1,13 @@
 /**
  * Interactive CTV ad — 5-option poll with D-pad navigation, inside a SIMID
  * iframe. Layout: transparent left half (linear video bleeds through),
- * opaque poll panel on the right. The iframe holds NO video element of
- * its own, so the linear's audio plays naturally — single source, no
- * cacophony, and crucially: if the SIMID iframe fails to load, the
- * linear plays normally as a standard video ad (good fallback).
+ * opaque poll panel on the right.
  *
- * We do NOT call Creative:requestPause or Creative:requestChangeVolume —
- * they are not honoured on IMA Android 3.30.3 (see KB §17), and we don't
- * need them: there's no competing in-iframe video to mute.
+ * Includes a debug HUD (top-left) that auto-fires Creative:requestPause +
+ * Creative:requestChangeVolume on startCreative AND exposes manual
+ * triggers via remote keys 1/2/3 — so we can verify whether IMA
+ * Android 3.30.3 honours them and (per KB §17) capture the resolve /
+ * reject reply.
  */
 (function () {
   'use strict';
@@ -20,12 +19,36 @@
     DOWN:  ['ArrowDown',  40],
     OK:    ['Enter',      13],
     BACK:  ['Escape', 27, 'Backspace', 8, 'GoBack', 4, 166, 212],
+    NUM_1: ['1', 49],
+    NUM_2: ['2', 50],
+    NUM_3: ['3', 51],
   };
 
   const matchKey = (e, list) =>
     list.some(k => e.key === k || e.keyCode === k || e.which === k);
 
   const log = (m) => { if (window.HUD) HUD.info(m); console.log('[ctv-poll]', m); };
+  const logErr = (m) => { if (window.HUD) HUD.err(m); console.error('[ctv-poll]', m); };
+
+  // Wraps a SIMID request promise to surface the player's verdict in plain
+  // English. hud.js already logs the wire-level → / ← transactions; this
+  // wrapper just adds a single ✅ / ❌ summary line + a 2 s timeout that
+  // catches "silently dropped" requests (where IMA neither resolves nor
+  // rejects) — see KB §17 for why this matters on IMA Android 3.30.3.
+  function probe(label, p) {
+    let settled = false;
+    p.then(reply => {
+      settled = true;
+      log(`✅ ${label} ACCEPTED`);
+    }).catch(err => {
+      settled = true;
+      logErr(`❌ ${label} REJECTED · ${err && err.message ? err.message : JSON.stringify(err || {}).slice(0,100)}`);
+    });
+    setTimeout(() => {
+      if (!settled) logErr(`⏱  ${label} NO REPLY (silently dropped by player)`);
+    }, 2000);
+    return p;
+  }
 
   const INACTIVITY_MS = 60_000;
   const HARD_CAP_MS   = 180_000;
@@ -51,7 +74,7 @@
 
   // -------- SIMID lifecycle ------------------------------------------------
   simid.addEventListener('init', () => {
-    log('Player:init handled');
+    // (hud.js auto-logs the inbound Player:init line — no need to duplicate)
     const adParams = simid.parseAdParameters();
     tracker = Tracker.fromEnvironment(adParams);
     tracker.event('simid_init');
@@ -71,7 +94,7 @@
   function onStart() {
     if (started) return;
     started = true;
-    log('startCreative → show poll panel (linear keeps playing with audio)');
+    log('▶ poll active · auto-firing pause / mute / resize probes…');
     tracker.event('simid_start');
     showStage();
     armInactivity();
@@ -79,6 +102,16 @@
     simid.reportTracking('creativeView').catch(() => {});
     tracker.event('poll_view');
     requestAnimationFrame(() => focusRow(0));
+
+    // Auto-fire the three SIMID requests we want to diagnose. Each promise
+    // will resolve (player accepted) or reject (player refused) and the
+    // result lands in the HUD.
+    setTimeout(() => probe('Creative:requestPause',         simid.requestPause()),                500);
+    setTimeout(() => probe('Creative:requestChangeVolume',  simid.changeVolume(0, true)),         900);
+    setTimeout(() => probe('Creative:requestResize · left', simid.send('SIMID:Creative:requestResize', {
+      videoDimensions:    { x: 0, y: 0, width: 1056, height: 1080 },  // 55% of 1920
+      creativeDimensions: { x: 0, y: 0, width: 1920, height: 1080 },
+    })), 1300);
   }
 
   function showStage() {
@@ -164,6 +197,24 @@
     if (matchKey(e, KEY.UP))   { focusRow(focusedIdx - 1); e.preventDefault(); return; }
     if (matchKey(e, KEY.DOWN)) { focusRow(focusedIdx + 1); e.preventDefault(); return; }
 
+    // Manual SIMID-request probes — fire from the remote / keyboard so we
+    // can re-test pause/mute at any point during the ad.
+    if (matchKey(e, KEY.NUM_1)) {
+      probe('Creative:requestPause [manual]', simid.requestPause());
+      e.preventDefault(); return;
+    }
+    if (matchKey(e, KEY.NUM_2)) {
+      probe('Creative:requestChangeVolume [manual]', simid.changeVolume(0, true));
+      e.preventDefault(); return;
+    }
+    if (matchKey(e, KEY.NUM_3)) {
+      probe('Creative:requestResize [manual]', simid.send('SIMID:Creative:requestResize', {
+        videoDimensions:    { x: 0, y: 0, width: 1056, height: 1080 },
+        creativeDimensions: { x: 0, y: 0, width: 1920, height: 1080 },
+      }));
+      e.preventDefault(); return;
+    }
+
     if (matchKey(e, KEY.OK)) {
       selectAndSubmit(navList[focusedIdx]);
       e.preventDefault();
@@ -171,8 +222,17 @@
     }
   });
 
-  // Click fallback for desktop testing.
+  // Click fallback (desktop testing — Fire TV remote uses 1/2/3 keys).
   opts.forEach(o => o.addEventListener('click', () => selectAndSubmit(o)));
+  document.getElementById('btn-pause') ?.addEventListener('click', () =>
+    probe('Creative:requestPause [btn]', simid.requestPause()));
+  document.getElementById('btn-mute')  ?.addEventListener('click', () =>
+    probe('Creative:requestChangeVolume [btn]', simid.changeVolume(0, true)));
+  document.getElementById('btn-resize')?.addEventListener('click', () =>
+    probe('Creative:requestResize [btn]', simid.send('SIMID:Creative:requestResize', {
+      videoDimensions:    { x: 0, y: 0, width: 1056, height: 1080 },
+      creativeDimensions: { x: 0, y: 0, width: 1920, height: 1080 },
+    })));
 
   // Kick off the SIMID handshake.
   simid.createSession();

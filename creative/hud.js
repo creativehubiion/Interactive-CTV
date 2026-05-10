@@ -18,8 +18,11 @@
 
   // HUD is on by default. Disable with ?debug=0 once you've verified the
   // pipeline end-to-end and you want the iframe overlay to be production-clean.
+  // ?debug=verbose adds keydown + focus auto-logging on top — too noisy for
+  // protocol-level diagnostics so it's opt-in.
   const params = new URLSearchParams(location.search);
-  const forced = params.get('debug') !== '0';
+  const forced  = params.get('debug') !== '0';
+  const verbose = params.get('debug') === 'verbose';
 
   const hudEl   = document.getElementById('hud');
   const bodyEl  = document.getElementById('hud-body');
@@ -74,25 +77,25 @@
     add('info', 'UA: ' + (navigator.userAgent || '').slice(0, 80));
   }
 
-  // Universal keydown logger — lets us see exactly what the WebView delivers
-  // for each remote button. Captures even if other handlers preventDefault.
-  document.addEventListener('keydown', (e) => {
-    if (!forced) return;
-    const t = e.target;
-    const tgt = t && t.tagName
-      ? `${t.tagName.toLowerCase()}${t.id ? '#'+t.id : ''}${t.dataset && t.dataset.id ? '['+t.dataset.id+']' : ''}`
-      : '?';
-    add('key', `keydown key=${JSON.stringify(e.key)} code=${e.code||'-'} kc=${e.keyCode} → ${tgt}`);
-  }, true);
+  // Verbose-only: keydown + focusin auto-logs. Off by default so the HUD
+  // is readable for protocol-level diagnostics.
+  if (verbose) {
+    document.addEventListener('keydown', (e) => {
+      const t = e.target;
+      const tgt = t && t.tagName
+        ? `${t.tagName.toLowerCase()}${t.id ? '#'+t.id : ''}${t.dataset && t.dataset.id ? '['+t.dataset.id+']' : ''}`
+        : '?';
+      add('key', `keydown key=${JSON.stringify(e.key)} code=${e.code||'-'} kc=${e.keyCode} → ${tgt}`);
+    }, true);
 
-  document.addEventListener('focusin', (e) => {
-    if (!forced) return;
-    const t = e.target;
-    const tgt = t && t.tagName
-      ? `${t.tagName.toLowerCase()}${t.id ? '#'+t.id : ''}${t.dataset && t.dataset.id ? '['+t.dataset.id+']' : ''}`
-      : '?';
-    add('focus', `focusin → ${tgt}`);
-  });
+    document.addEventListener('focusin', (e) => {
+      const t = e.target;
+      const tgt = t && t.tagName
+        ? `${t.tagName.toLowerCase()}${t.id ? '#'+t.id : ''}${t.dataset && t.dataset.id ? '['+t.dataset.id+']' : ''}`
+        : '?';
+      add('focus', `focusin → ${tgt}`);
+    });
+  }
 
   window.addEventListener('error', (e) => {
     add('err', `JS error: ${e.message} @ ${e.filename}:${e.lineno}`);

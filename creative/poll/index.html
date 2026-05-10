@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=1920, initial-scale=1, user-scalable=no" />
   <title>Interactive CTV Ad — How Solo Are You?</title>
-  <link rel="stylesheet" href="styles.css?v=7" />
+  <link rel="stylesheet" href="styles.css?v=8" />
 
   <!-- Early-bird message buffer (see KB §2). -->
   <script>
@@ -85,10 +85,29 @@
     </div>
   </div>
 
+  <!--
+    Debug HUD (top-left, large). On by default for now since we're
+    investigating IMA's pause/mute response. Add ?debug=0 to hide.
+    Manual triggers let us re-fire requestPause / requestChangeVolume
+    from the remote and watch the IMA reply land in the log below.
+  -->
+  <div id="hud" class="hud hud-large">
+    <div class="hud-head">
+      <span class="hud-title">SIMID DEBUG</span>
+      <span class="hud-meta" id="hud-meta">booting…</span>
+    </div>
+    <div class="hud-actions">
+      <button class="hud-btn" id="btn-pause"   tabindex="-1">[1] PAUSE LINEAR</button>
+      <button class="hud-btn" id="btn-mute"    tabindex="-1">[2] MUTE LINEAR</button>
+      <button class="hud-btn" id="btn-resize"  tabindex="-1">[3] RESIZE LINEAR</button>
+    </div>
+    <div class="hud-body" id="hud-body"></div>
+  </div>
+
   <!-- Shared SIMID + HUD + tracker from the parent creative/ directory. -->
   <script src="../hud.js?v=10"></script>
   <script src="../simid-protocol.js?v=10"></script>
   <script src="../tracker.js?v=10"></script>
-  <script src="poll.js?v=6"></script>
+  <script src="poll.js?v=7"></script>
 </body>
 </html>

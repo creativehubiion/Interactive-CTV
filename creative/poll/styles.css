@@ -37,9 +37,9 @@ html, body {
 }
 .stage.visible { display: block; opacity: 1; }
 
-/* Full-screen opaque background gradient — completely hides any underlying
-   linear video. Mirrors the mockup's dark navy. */
-.bg {
+/* Right-pane opaque background. Covers the right 45% so the linear video
+   shows on the left only. */
+.right-bg {
   position: absolute; inset: 0;
   background:
     radial-gradient(ellipse at 25% 30%, #15264f 0%, transparent 60%),
@@ -72,37 +72,25 @@ html, body {
   justify-content: center;
 }
 
-/* ---- Left pane: brand, video, footer ------------------------------------- */
-.brand-strip {
-  display: flex; align-items: center;
-}
-.brand-logo {
-  font-weight: 800; letter-spacing: 0.18em;
-  font-size: 2vh;
-  padding: 1vh 1.6vw;
-  border: 2px solid var(--accent);
-  color: var(--accent);
-  background: rgba(0, 0, 0, 0.25);
-}
-
-.video-frame {
-  flex: 1;
-  margin: 4vh 0;
-  background: #000;
-  border: 1px solid rgba(91, 158, 255, 0.25);
-  border-radius: 1vh;
-  overflow: hidden;
-  display: flex;
+/* ---- Left pane: vote-now hint + footer ----------------------------------- */
+.vote-hint {
+  align-self: flex-end;             /* push hint toward right edge — sits next
+                                       to the poll panel and points into it */
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 6vh rgba(91, 158, 255, 0.12);
+  gap: 0.6vw;
+  padding: 1.1vh 1.6vw;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--accent-soft);
+  font-weight: 700;
+  font-size: 2.2vh;
+  letter-spacing: 0.04em;
 }
-
-#ad-video {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;   /* letterbox to fit; preserve aspect ratio */
-  background: #000;
+.vote-hint .hint-arrow {
+  font-size: 2vh;
+  line-height: 1;
+  color: var(--accent);
 }
 
 .left-footer {

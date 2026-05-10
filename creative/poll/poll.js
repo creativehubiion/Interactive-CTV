@@ -70,7 +70,24 @@
   // 5 poll options form the navigable column. Pressing OK on one
   // is the vote — there is no separate submit button.
   const opts    = Array.from(document.querySelectorAll('.opt'));
-  const navList = opts;
+
+  // HUD action buttons form a SECOND navigable column on the left.
+  // Pressing LEFT from the poll moves focus to this list; pressing
+  // RIGHT from a HUD button moves focus back to the poll.
+  const hudBtns = Array.from(document.querySelectorAll('.hud-btn'));
+  const hudActions = [
+    () => probe('Creative:requestPause [btn]',         simid.requestPause()),
+    () => probe('Creative:requestChangeVolume [btn]',  simid.changeVolume(0, true)),
+    () => probe('Creative:requestResize [btn]',        simid.send('SIMID:Creative:requestResize', {
+      videoDimensions:    { x: 0, y: 0, width: 1056, height: 1080 },
+      creativeDimensions: { x: 0, y: 0, width: 1920, height: 1080 },
+    })),
+  ];
+
+  // Focus state: which pane is active and which row inside it.
+  let pane = 'poll';                 // 'poll' | 'hud'
+  let pollIdx = 0;
+  let hudIdx  = 0;
 
   // -------- SIMID lifecycle ------------------------------------------------
   simid.addEventListener('init', () => {
@@ -154,15 +171,17 @@
   }
 
   // -------- Navigation + selection ----------------------------------------
-  let focusedIdx = 0;
-
-  function focusRow(idx) {
-    if (idx < 0) idx = 0;
-    if (idx >= navList.length) idx = navList.length - 1;
-    focusedIdx = idx;
-    navList.forEach((el, i) => el.classList.toggle('focused', i === idx));
-    try { navList[idx].focus(); } catch (_) {}
+  function refreshFocus() {
+    opts.forEach   ((el, i) => el.classList.toggle('focused', pane === 'poll' && i === pollIdx));
+    hudBtns.forEach((el, i) => el.classList.toggle('focused', pane === 'hud'  && i === hudIdx));
+    try {
+      const el = pane === 'poll' ? opts[pollIdx] : hudBtns[hudIdx];
+      if (el) el.focus();
+    } catch (_) {}
   }
+  function focusRow(idx) { pollIdx = clamp(idx, 0, opts.length - 1);    pane = 'poll'; refreshFocus(); }
+  function focusHud(idx) { hudIdx  = clamp(idx, 0, hudBtns.length - 1); pane = 'hud';  refreshFocus(); }
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 
   function selectAndSubmit(opt) {
     if (selectedValue !== null) return;     // single-vote: ignore further OKs
@@ -194,45 +213,39 @@
       return;
     }
 
-    if (matchKey(e, KEY.UP))   { focusRow(focusedIdx - 1); e.preventDefault(); return; }
-    if (matchKey(e, KEY.DOWN)) { focusRow(focusedIdx + 1); e.preventDefault(); return; }
+    // Pane switching: LEFT moves to HUD column, RIGHT moves back to poll.
+    if (matchKey(e, KEY.LEFT))  { focusHud(hudIdx);   e.preventDefault(); return; }
+    if (matchKey(e, KEY.RIGHT)) { focusRow(pollIdx);  e.preventDefault(); return; }
 
-    // Manual SIMID-request probes — fire from the remote / keyboard so we
-    // can re-test pause/mute at any point during the ad.
-    if (matchKey(e, KEY.NUM_1)) {
-      probe('Creative:requestPause [manual]', simid.requestPause());
+    // Up/Down navigates within whichever pane is active.
+    if (matchKey(e, KEY.UP)) {
+      pane === 'hud' ? focusHud(hudIdx - 1) : focusRow(pollIdx - 1);
       e.preventDefault(); return;
     }
-    if (matchKey(e, KEY.NUM_2)) {
-      probe('Creative:requestChangeVolume [manual]', simid.changeVolume(0, true));
-      e.preventDefault(); return;
-    }
-    if (matchKey(e, KEY.NUM_3)) {
-      probe('Creative:requestResize [manual]', simid.send('SIMID:Creative:requestResize', {
-        videoDimensions:    { x: 0, y: 0, width: 1056, height: 1080 },
-        creativeDimensions: { x: 0, y: 0, width: 1920, height: 1080 },
-      }));
+    if (matchKey(e, KEY.DOWN)) {
+      pane === 'hud' ? focusHud(hudIdx + 1) : focusRow(pollIdx + 1);
       e.preventDefault(); return;
     }
 
+    // OK either votes (poll pane) or fires the focused HUD action.
     if (matchKey(e, KEY.OK)) {
-      selectAndSubmit(navList[focusedIdx]);
+      if (pane === 'hud') hudActions[hudIdx]();
+      else                selectAndSubmit(opts[pollIdx]);
       e.preventDefault();
       return;
     }
+
+    // 1/2/3 number-key shortcuts — fire pause/mute/resize from anywhere
+    // (works with USB keyboard plugged into Fire TV; Fire remote may not
+    // have number keys).
+    if (matchKey(e, KEY.NUM_1)) { hudActions[0](); e.preventDefault(); return; }
+    if (matchKey(e, KEY.NUM_2)) { hudActions[1](); e.preventDefault(); return; }
+    if (matchKey(e, KEY.NUM_3)) { hudActions[2](); e.preventDefault(); return; }
   });
 
-  // Click fallback (desktop testing — Fire TV remote uses 1/2/3 keys).
+  // Click fallback (desktop testing).
   opts.forEach(o => o.addEventListener('click', () => selectAndSubmit(o)));
-  document.getElementById('btn-pause') ?.addEventListener('click', () =>
-    probe('Creative:requestPause [btn]', simid.requestPause()));
-  document.getElementById('btn-mute')  ?.addEventListener('click', () =>
-    probe('Creative:requestChangeVolume [btn]', simid.changeVolume(0, true)));
-  document.getElementById('btn-resize')?.addEventListener('click', () =>
-    probe('Creative:requestResize [btn]', simid.send('SIMID:Creative:requestResize', {
-      videoDimensions:    { x: 0, y: 0, width: 1056, height: 1080 },
-      creativeDimensions: { x: 0, y: 0, width: 1920, height: 1080 },
-    })));
+  hudBtns.forEach((el, i) => el.addEventListener('click', () => hudActions[i]()));
 
   // Kick off the SIMID handshake.
   simid.createSession();

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Source template for interactive-vast-poll.xml — second SIMID test creative
+  with a poll-style interactive panel (see /creative/poll/index.html).
+
+  Same VAST shape as interactive-vast.template.xml — VAST 3.0, no CDATA,
+  minimal MediaFile attributes, no AdParameters — that shape is what IMA
+  HTML5's SIMID parser is known to accept (see KB §3, §4).
+
+  Build:
+    BASE_URL=https://creativehubiion.github.io/Interactive-CTV node server/build-vast.js
+-->
+<VAST xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="vast.xsd" version="3.0">
+  <Ad id="interactive-ctv-poll-1">
+    <InLine>
+      <AdSystem>interactive-ctv-ref</AdSystem>
+      <AdTitle>Interactive CTV Poll — Rate Your Support</AdTitle>
+      <Description>D-pad-driven SIMID interactive poll over a linear video.</Description>
+      <Error>${BASE_URL}/track/error</Error>
+      <Impression>${BASE_URL}/track/impression</Impression>
+      <Creatives>
+        <Creative sequence="1">
+          <Linear>
+            <Duration>00:00:30</Duration>
+            <TrackingEvents>
+              <Tracking event="start">${BASE_URL}/track/start</Tracking>
+              <Tracking event="firstQuartile">${BASE_URL}/track/q1</Tracking>
+              <Tracking event="midpoint">${BASE_URL}/track/q2</Tracking>
+              <Tracking event="thirdQuartile">${BASE_URL}/track/q3</Tracking>
+              <Tracking event="complete">${BASE_URL}/track/complete</Tracking>
+              <Tracking event="creativeView">${BASE_URL}/track/creativeView</Tracking>
+              <Tracking event="skip">${BASE_URL}/track/skip</Tracking>
+              <Tracking event="select">${BASE_URL}/track/select</Tracking>
+              <Tracking event="timeout">${BASE_URL}/track/timeout</Tracking>
+            </TrackingEvents>
+            <VideoClicks>
+              <ClickThrough id="ctv-poll-1">https://creativehubiion.github.io/Interactive-CTV/</ClickThrough>
+              <ClickTracking id="ctv-poll-1">${BASE_URL}/track/click</ClickTracking>
+            </VideoClicks>
+            <MediaFiles>
+              <MediaFile delivery="progressive" type="video/mp4" width="1280" height="720">
+                ${BASE_URL}/creative/poll/assets/video.mp4
+              </MediaFile>
+              <InteractiveCreativeFile type="text/html" apiFramework="SIMID" variableDuration="true">
+                ${BASE_URL}/creative/poll/index.html?v=2
+              </InteractiveCreativeFile>
+            </MediaFiles>
+          </Linear>
+        </Creative>
+      </Creatives>
+    </InLine>
+  </Ad>
+</VAST>

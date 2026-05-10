@@ -1,0 +1,278 @@
+/* Poll creative — TV-safe layout, designed for 1920×1080.
+   Color palette mirrors the campaign mockup (dark navy + light blue accents). */
+
+:root {
+  --bg-deep:      #0a1838;
+  --bg-mid:       #0e1f44;
+  --bg-light:     #11244a;
+  --accent:       #5b9eff;
+  --accent-soft:  #94c4ff;
+  --text:         #e8f1ff;
+  --text-dim:     #94b3d8;
+  --opt-bg:       rgba(91, 158, 255, 0.06);
+  --opt-bg-focus: rgba(91, 158, 255, 0.18);
+  --opt-border:   rgba(91, 158, 255, 0.28);
+  --opt-border-focus: #5b9eff;
+  --submit-bg:    rgba(91, 158, 255, 0.12);
+  --submit-bg-focus: #5b9eff;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: transparent;
+  color: var(--text);
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.stage {
+  position: fixed; inset: 0;
+  display: none;
+  opacity: 0;
+  transition: opacity 250ms ease;
+}
+.stage.visible { display: block; opacity: 1; }
+
+/* Full-screen opaque background gradient — completely hides any underlying
+   linear video. Mirrors the mockup's dark navy. */
+.bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at 25% 30%, #15264f 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 70%, #0e2148 0%, transparent 60%),
+    linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-mid) 50%, var(--bg-deep) 100%);
+  z-index: 1;
+}
+
+/* ---- Layout: 55% / 45% horizontal split ----------------------------------- */
+.left-pane,
+.right-pane {
+  position: absolute;
+  top: 0; bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+}
+
+.left-pane {
+  left: 0;
+  width: 55%;
+  padding: 4vh 3vw 4vh 5vw;
+  justify-content: space-between;
+}
+
+.right-pane {
+  right: 0;
+  width: 45%;
+  padding: 6vh 5vw 6vh 3vw;
+  justify-content: center;
+}
+
+/* ---- Left pane: brand, video, footer ------------------------------------- */
+.brand-strip {
+  display: flex; align-items: center;
+}
+.brand-logo {
+  font-weight: 800; letter-spacing: 0.18em;
+  font-size: 2vh;
+  padding: 1vh 1.6vw;
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.video-frame {
+  flex: 1;
+  margin: 4vh 0;
+  background: #000;
+  border: 1px solid rgba(91, 158, 255, 0.25);
+  border-radius: 1vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 6vh rgba(91, 158, 255, 0.12);
+}
+
+#ad-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;   /* letterbox to fit; preserve aspect ratio */
+  background: #000;
+}
+
+.left-footer {
+  display: flex; gap: 2vw;
+  font-size: 1.7vh;
+  color: var(--text-dim);
+}
+.key {
+  display: inline-block;
+  padding: 0.3vh 0.9vw;
+  margin-right: 0.5vw;
+  border: 1px solid rgba(148, 196, 255, 0.4);
+  border-radius: 0.4vh;
+  font-weight: 700;
+  color: var(--accent-soft);
+}
+
+/* ---- Right pane: poll ----------------------------------------------------- */
+.poll-head { margin-bottom: 4vh; }
+.poll-title {
+  font-size: 5.5vh;
+  font-weight: 800;
+  color: var(--accent-soft);
+  line-height: 1.1;
+  margin-bottom: 1.5vh;
+}
+.poll-subtitle {
+  font-size: 2.1vh;
+  color: var(--text-dim);
+  line-height: 1.4;
+  max-width: 90%;
+}
+
+.poll-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6vh;
+}
+
+.opt {
+  display: flex;
+  align-items: center;
+  gap: 2.5vw;
+  padding: 1.8vh 2vw;
+  background: var(--opt-bg);
+  border: 2px solid var(--opt-border);
+  border-radius: 1vh;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+.opt:focus,
+.opt.focused {
+  background: var(--opt-bg-focus);
+  border-color: var(--opt-border-focus);
+  transform: scale(1.02);
+  box-shadow: 0 0 3vh rgba(91, 158, 255, 0.4);
+}
+.opt.selected {
+  background: var(--accent);
+  border-color: #ffffff;
+  color: #0a1838;
+}
+.opt.selected .opt-num,
+.opt.selected .opt-label { color: #0a1838; }
+
+.opt-num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 4.5vh; height: 4.5vh;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(91, 158, 255, 0.18);
+  border: 2px solid var(--opt-border-focus);
+  color: var(--accent-soft);
+  font-weight: 700;
+  font-size: 2.5vh;
+}
+.opt-label {
+  font-size: 2.4vh;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.submit-btn {
+  margin-top: 2vh;
+  padding: 2vh 2vw;
+  background: var(--submit-bg);
+  border: 2px solid var(--opt-border);
+  border-radius: 1vh;
+  color: var(--text-dim);
+  font-weight: 800;
+  font-size: 2.4vh;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  outline: none;
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease, color 120ms ease;
+}
+.submit-btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.submit-btn:not([disabled]) {
+  color: var(--text);
+}
+.submit-btn:focus,
+.submit-btn.focused {
+  background: var(--submit-bg-focus);
+  color: #0a1838;
+  border-color: #ffffff;
+  transform: scale(1.04);
+  box-shadow: 0 0 3vh rgba(91, 158, 255, 0.5);
+}
+
+/* ---- "Thanks for voting" overlay ----------------------------------------- */
+.thanks {
+  position: absolute; inset: 0;
+  z-index: 8;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: rgba(10, 24, 56, 0.94);
+  text-align: center;
+  gap: 2vh;
+  padding: 8vh;
+}
+.thanks.hidden { display: none; }
+.thanks h2 { font-size: 7vh; color: var(--accent-soft); }
+.thanks p  { font-size: 2.8vh; opacity: 0.9; }
+
+/* ---- Debug HUD (small, top-right; ?debug=0 to hide) ---------------------- */
+.hud {
+  position: fixed;
+  right: 0.5vw; top: 0.5vh;
+  width: 18vw; max-width: 360px;
+  max-height: 22vh;
+  background: rgba(0, 0, 0, 0.78);
+  color: #c8ffb9;
+  border: 1px solid #3a5a2a;
+  border-radius: 0.4vh;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 1vh;
+  line-height: 1.3;
+  z-index: 99999;
+  display: none;
+  flex-direction: column;
+  pointer-events: none;
+}
+.hud.visible { display: flex; }
+.hud-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.3vh 0.6vw;
+  background: #1a3010;
+  color: #d8ffd0;
+  border-bottom: 1px solid #3a5a2a;
+}
+.hud-title { font-weight: 700; letter-spacing: 0.08em; font-size: 0.9vh; }
+.hud-meta  { opacity: 0.85; font-size: 0.85vh; }
+.hud-body {
+  flex: 1; overflow: hidden;
+  padding: 0.3vh 0.6vw;
+  font-size: 0.95vh;
+}
+.hud-row { white-space: pre; }
+.hud-row.lc-info  { color: #c8ffb9; }
+.hud-row.lc-key   { color: #ffe27a; }
+.hud-row.lc-focus { color: #9be3ff; }
+.hud-row.lc-msg   { color: #ffd2f0; }
+.hud-row.lc-err   { color: #ff8a8a; }
+.hud-row .ts { opacity: 0.55; margin-right: 0.4vw; }

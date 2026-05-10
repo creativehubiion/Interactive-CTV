@@ -38,14 +38,15 @@ html, body {
 .stage.visible { display: block; opacity: 1; }
 
 /* Right-pane opaque background. Covers the right 45% so the linear video
-   shows on the left only. */
+   shows on the left only. z-index: -1 so it sits BELOW the poll content
+   (which is static-positioned). */
 .right-bg {
   position: absolute; inset: 0;
   background:
     radial-gradient(ellipse at 25% 30%, #15264f 0%, transparent 60%),
     radial-gradient(ellipse at 80% 70%, #0e2148 0%, transparent 60%),
     linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-mid) 50%, var(--bg-deep) 100%);
-  z-index: 1;
+  z-index: -1;
 }
 
 /* ---- Layout: 55% / 45% horizontal split ----------------------------------- */

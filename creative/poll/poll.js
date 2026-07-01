@@ -81,7 +81,7 @@
   // RIGHT from a HUD button moves focus back to the poll.
   const hudBtns = Array.from(document.querySelectorAll('.hud-btn'));
   const hudActions = [
-    () => probe('Creative:requestPause [btn]',         simid.requestPause()),
+    () => log('Creative:requestPause disabled (Media3 pauseAd mismatch)'),
     () => probe('Creative:requestChangeVolume [btn]',  simid.changeVolume(0, true)),
     () => probe('Creative:requestResize [btn]',        simid.send('SIMID:Creative:requestResize', {
       videoDimensions:    { x: 0, y: 0, width: 1056, height: 1080 },
@@ -126,11 +126,13 @@
     tracker.event('poll_view');
     requestAnimationFrame(() => focusRow(0));
 
-    // Best-effort: ask the player to pause the linear so the user can focus
-    // on the poll. Honoured on browser players (IMA HTML5, IAB ref) — linear
-    // freezes for the duration of the interaction. Silently no-op on IMA
-    // Android (linear keeps playing under the overlay — see KB §17).
-    setTimeout(() => simid.requestPause().catch(() => {}), 500);
+    // NOTE: We intentionally do NOT call Creative:requestPause here.
+    // On Media3's IMA extension a SIMID pause request triggers an
+    // "Unexpected pauseAd" ad-index mismatch in AdTagLoader that freezes
+    // D-pad interaction after a few key presses (Fire TV, FT integration,
+    // 2026-06-29). The pause was only ever a best-effort no-op on IMA
+    // Android anyway, so removing it is safe. The linear keeps playing
+    // under the overlay, which is the intended CTV behaviour.
 
     // Debug-only: diagnostic probes for requestChangeVolume + requestResize.
     // Both are universally rejected per testing — kept here so a debug run

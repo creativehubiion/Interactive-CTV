@@ -122,9 +122,8 @@
   function onStart() {
     if (started) return;
     started = true;
-    log('startCreative → pause + mute + game');
+    log('startCreative → game (no pause/mute)');
     tracker.event('simid_start');
-    muteLinear();
     showStage();
     armInactivity();
     armHardCap();
@@ -142,14 +141,13 @@
   }
 
   function muteLinear() {
-    if (mutedAlready) return;
+    // DISABLED 2026-06-29. We no longer call Creative:requestPause /
+    // requestChangeVolume. On Media3's IMA extension a SIMID pause request
+    // triggers an "Unexpected pauseAd" ad-index mismatch in AdTagLoader that
+    // freezes D-pad interaction after a few key presses (Fire TV, FT
+    // integration). Both were best-effort no-ops on IMA Android anyway, so
+    // removing them is safe. The linear keeps playing under the overlay.
     mutedAlready = true;
-    // Send pause + volume change at three staggers — covers IMA builds
-    // where one or the other is silently ignored.
-    simid.requestPause().catch(() => {});
-    simid.changeVolume(0, true).catch(() => {});
-    setTimeout(() => { simid.requestPause().catch(() => {}); simid.changeVolume(0, true).catch(() => {}); }, 250);
-    setTimeout(() => { simid.requestPause().catch(() => {}); simid.changeVolume(0, true).catch(() => {}); }, 1000);
   }
 
   // -------- Stage / Focus --------------------------------------------------
@@ -195,8 +193,7 @@
     stage.setAttribute('aria-hidden', 'true');
     log(`Teardown: ${reason}`);
     tracker.event('teardown', { reason });
-    // Restore audio so the next ad in the pod isn't muted.
-    simid.changeVolume(1, false).catch(() => {});
+    // (No volume restore needed — we no longer mute the linear.)
     // Use Creative:requestSkip — Google's reference uses this for
     // user-initiated dismissal. Creative:requestStop on IMA Android 3.30.3
     // can be interpreted as "creative crashed, retry from top" and trigger

@@ -1,0 +1,272 @@
+/* Poll creative — TV-safe layout, designed for 1920×1080.
+   Color palette mirrors the campaign mockup (dark navy + light blue accents). */
+
+:root {
+  --bg-deep:      #0a1838;
+  --bg-mid:       #0e1f44;
+  --bg-light:     #11244a;
+  --accent:       #5b9eff;
+  --accent-soft:  #94c4ff;
+  --text:         #e8f1ff;
+  --text-dim:     #94b3d8;
+  --opt-bg:       rgba(91, 158, 255, 0.06);
+  --opt-bg-focus: rgba(91, 158, 255, 0.18);
+  --opt-border:   rgba(91, 158, 255, 0.28);
+  --opt-border-focus: #5b9eff;
+  --submit-bg:    rgba(91, 158, 255, 0.12);
+  --submit-bg-focus: #5b9eff;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: transparent;
+  color: var(--text);
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.stage {
+  position: fixed; inset: 0;
+  display: none;
+  opacity: 0;
+  transition: opacity 250ms ease;
+}
+.stage.visible { display: block; opacity: 1; }
+
+/* Right-pane opaque background. Covers the right 45% so the linear video
+   shows on the left only. z-index: -1 so it sits BELOW the poll content
+   (which is static-positioned). */
+.right-bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at 25% 30%, #15264f 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 70%, #0e2148 0%, transparent 60%),
+    linear-gradient(135deg, var(--bg-deep) 0%, var(--bg-mid) 50%, var(--bg-deep) 100%);
+  z-index: -1;
+}
+
+/* ---- Layout: 55% / 45% horizontal split ----------------------------------- */
+.left-pane,
+.right-pane {
+  position: absolute;
+  top: 0; bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+}
+
+.left-pane {
+  left: 0;
+  width: 55%;
+  padding: 4vh 3vw 4vh 5vw;
+  justify-content: space-between;
+}
+
+.right-pane {
+  right: 0;
+  width: 45%;
+  padding: 6vh 5vw 6vh 3vw;
+  justify-content: center;
+}
+
+/* ---- Left pane: vote-now hint + footer ----------------------------------- */
+.vote-hint {
+  align-self: flex-end;             /* push hint toward right edge — sits next
+                                       to the poll panel and points into it */
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6vw;
+  padding: 1.1vh 1.6vw;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--accent-soft);
+  font-weight: 700;
+  font-size: 2.2vh;
+  letter-spacing: 0.04em;
+}
+.vote-hint .hint-arrow {
+  font-size: 2vh;
+  line-height: 1;
+  color: var(--accent);
+}
+
+.left-footer {
+  display: flex; gap: 2vw;
+  font-size: 1.7vh;
+  color: var(--text-dim);
+}
+.key {
+  display: inline-block;
+  padding: 0.3vh 0.9vw;
+  margin-right: 0.5vw;
+  border: 1px solid rgba(148, 196, 255, 0.4);
+  border-radius: 0.4vh;
+  font-weight: 700;
+  color: var(--accent-soft);
+}
+
+/* ---- Right pane: poll ----------------------------------------------------- */
+.poll-head { margin-bottom: 4vh; }
+.poll-title {
+  font-size: 5.5vh;
+  font-weight: 800;
+  color: var(--accent-soft);
+  line-height: 1.1;
+  margin-bottom: 1.5vh;
+}
+.poll-subtitle {
+  font-size: 2.1vh;
+  color: var(--text-dim);
+  line-height: 1.4;
+  max-width: 90%;
+}
+
+.poll-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6vh;
+}
+
+.opt {
+  display: flex;
+  align-items: center;
+  gap: 2.5vw;
+  padding: 1.8vh 2vw;
+  background: var(--opt-bg);
+  border: 2px solid var(--opt-border);
+  border-radius: 1vh;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+.opt:focus,
+.opt.focused {
+  background: var(--opt-bg-focus);
+  border-color: var(--opt-border-focus);
+  transform: scale(1.02);
+  box-shadow: 0 0 3vh rgba(91, 158, 255, 0.4);
+}
+.opt.selected {
+  background: var(--accent);
+  border-color: #ffffff;
+  color: #0a1838;
+}
+.opt.selected .opt-num,
+.opt.selected .opt-label { color: #0a1838; }
+
+.opt-num {
+  display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 4.5vh; height: 4.5vh;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(91, 158, 255, 0.18);
+  border: 2px solid var(--opt-border-focus);
+  color: var(--accent-soft);
+  font-weight: 700;
+  font-size: 2.5vh;
+}
+.opt-label {
+  font-size: 2.4vh;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+/* ---- "Thanks for voting" overlay ----------------------------------------- */
+.thanks {
+  position: absolute; inset: 0;
+  z-index: 8;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: rgba(10, 24, 56, 0.94);
+  text-align: center;
+  gap: 2vh;
+  padding: 8vh;
+}
+.thanks.hidden { display: none; }
+.thanks h2 { font-size: 7vh; color: var(--accent-soft); }
+.thanks p  { font-size: 2.8vh; opacity: 0.9; }
+
+/* ---- Debug HUD (TOP-LEFT, LARGE — for Fire TV visibility) ---------------- */
+.hud {
+  position: fixed;
+  left: 1vw; top: 1vh; bottom: 1vh;   /* fill almost full height of left half */
+  width: 50vw;
+  max-height: 96vh;
+  background: rgba(0, 0, 0, 0.88);
+  color: #c8ffb9;
+  border: 2px solid #3a5a2a;
+  border-radius: 0.6vh;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 1.7vh;
+  line-height: 1.35;
+  z-index: 99999;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;                   /* clip rounded corners */
+}
+.hud.visible { display: flex; }
+.hud-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0.8vh 1vw;
+  background: #1a3010;
+  color: #d8ffd0;
+  border-bottom: 1px solid #3a5a2a;
+}
+.hud-title { font-weight: 700; letter-spacing: 0.08em; font-size: 1.7vh; }
+.hud-meta  { opacity: 0.85; font-size: 1.5vh; }
+
+/* Manual-trigger buttons row — focusable via the remote (1/2/3 hotkeys). */
+.hud-actions {
+  display: flex; gap: 0.6vw;
+  padding: 0.6vh 1vw;
+  border-bottom: 1px solid #3a5a2a;
+  background: rgba(20, 40, 16, 0.6);
+}
+.hud-btn {
+  flex: 1;
+  padding: 0.6vh 0.6vw;
+  background: rgba(58, 90, 42, 0.6);
+  border: 1px solid #5a8a3a;
+  border-radius: 0.4vh;
+  color: #d8ffd0;
+  font-family: inherit;
+  font-size: 1.4vh;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  outline: none;
+}
+.hud-btn:focus,
+.hud-btn.focused {
+  background: #5a8a3a;
+  color: #ffffff;
+  border-color: #c8ffb9;
+}
+
+.hud-body {
+  flex: 1;
+  overflow-y: auto;                   /* scroll so newest line is always visible */
+  padding: 0.6vh 1vw;
+  font-size: 1.5vh;
+  scrollbar-width: thin;
+  scrollbar-color: #3a5a2a rgba(0, 0, 0, 0.3);
+}
+.hud-body::-webkit-scrollbar { width: 0.6vw; }
+.hud-body::-webkit-scrollbar-thumb { background: #3a5a2a; border-radius: 0.3vh; }
+.hud-body::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); }
+.hud-row { white-space: pre-wrap; word-break: break-word; }
+.hud-row.lc-info  { color: #c8ffb9; }
+.hud-row.lc-key   { color: #ffe27a; }
+.hud-row.lc-focus { color: #9be3ff; }
+.hud-row.lc-msg   { color: #ffd2f0; }
+.hud-row.lc-err   { color: #ff8a8a; }
+.hud-row .ts { opacity: 0.55; margin-right: 0.6vw; }

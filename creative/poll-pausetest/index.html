@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=1920, initial-scale=1, user-scalable=no" />
+  <title>Interactive CTV Ad — How Solo Are You?</title>
+  <link rel="stylesheet" href="styles.css?v=9" />
+
+  <!-- Early-bird message buffer (see KB §2). -->
+  <script>
+    (function () {
+      window.__simidEarlyBuffer = [];
+      window.__simidEarlyHandler = function (event) {
+        window.__simidEarlyBuffer.push({ data: event.data, source: event.source, origin: event.origin });
+      };
+      window.addEventListener('message', window.__simidEarlyHandler, true);
+    })();
+  </script>
+</head>
+<body>
+  <!--
+    Layout strategy for the poll variant:
+    - The SIMID iframe is full-screen by default (set by IMA).
+    - We DO NOT load our own <video> element. The underlying linear video
+      keeps playing on the full screen — which is fine because it's the
+      ad video the user is supposed to watch.
+    - The LEFT half of our iframe is fully transparent — the linear video
+      shows through it.
+    - The RIGHT half has an opaque dark panel containing the poll.
+    - We DO NOT call Creative:requestPause or Creative:requestChangeVolume.
+      Those are unreliable on IMA Android 3.30.3 anyway (see KB §17), and
+      since we're not loading a competing video element, there's no audio
+      to fight with — the user hears the linear's audio normally while
+      voting. Single audio source, no cacophony.
+  -->
+  <div id="stage" class="stage" aria-hidden="true">
+
+    <!-- LEFT half: transparent (linear video bleeds through). Holds only
+         a small "vote now ▾" hint to point the user's attention to the
+         poll panel on the right. -->
+    <section class="left-pane">
+      <div class="vote-hint">
+        <span class="hint-text">Vote Now</span>
+        <span class="hint-arrow">▶</span>
+      </div>
+      <div class="left-footer">
+        <span class="hint"><span class="key">▲ ▼</span> Choose</span>
+        <span class="hint"><span class="key">OK</span> Select</span>
+        <span class="hint"><span class="key">BACK</span> Skip</span>
+      </div>
+    </section>
+
+    <!-- RIGHT half: opaque panel with the poll. -->
+    <aside class="right-pane">
+      <div class="right-bg"></div>
+
+      <header class="poll-head">
+        <h1 class="poll-title">How Solo Are You?</h1>
+        <p class="poll-subtitle">What&rsquo;s your biggest business admin headache right now?</p>
+      </header>
+
+      <div class="poll-options" id="poll-options">
+        <button class="opt" tabindex="-1" data-value="1" data-row="0">
+          <span class="opt-num">1</span><span class="opt-label">Tracking expenses manually</span>
+        </button>
+        <button class="opt" tabindex="-1" data-value="2" data-row="1">
+          <span class="opt-num">2</span><span class="opt-label">Switching between too many apps</span>
+        </button>
+        <button class="opt" tabindex="-1" data-value="3" data-row="2">
+          <span class="opt-num">3</span><span class="opt-label">Chasing invoices and payments</span>
+        </button>
+        <button class="opt" tabindex="-1" data-value="4" data-row="3">
+          <span class="opt-num">4</span><span class="opt-label">Managing business banking</span>
+        </button>
+        <button class="opt" tabindex="-1" data-value="5" data-row="4">
+          <span class="opt-num">5</span><span class="opt-label">All of the above</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- "Thanks for voting" overlay shown after submit. -->
+    <div id="thanks" class="thanks hidden">
+      <h2 id="thanks-title">Thanks for voting!</h2>
+      <p id="thanks-body">Returning you to your show…</p>
+    </div>
+  </div>
+
+  <!--
+    Debug HUD (top-left, large). On by default for now since we're
+    investigating IMA's pause/mute response. Add ?debug=0 to hide.
+    Manual triggers let us re-fire requestPause / requestChangeVolume
+    from the remote and watch the IMA reply land in the log below.
+  -->
+  <div id="hud" class="hud hud-large">
+    <div class="hud-head">
+      <span class="hud-title">SIMID DEBUG</span>
+      <span class="hud-meta" id="hud-meta">booting…</span>
+    </div>
+    <div class="hud-actions">
+      <button class="hud-btn" id="btn-pause"   tabindex="-1">[1] PAUSE LINEAR</button>
+      <button class="hud-btn" id="btn-mute"    tabindex="-1">[2] MUTE LINEAR</button>
+      <button class="hud-btn" id="btn-resize"  tabindex="-1">[3] RESIZE LINEAR</button>
+    </div>
+    <div class="hud-body" id="hud-body"></div>
+  </div>
+
+  <!-- Shared SIMID + HUD + tracker from the parent creative/ directory. -->
+  <script src="../hud.js?v=13"></script>
+  <script src="../simid-protocol.js?v=13"></script>
+  <script src="../tracker.js?v=13"></script>
+  <script src="poll.js?v=99"></script>
+</body>
+</html>

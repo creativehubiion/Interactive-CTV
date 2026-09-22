@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  TEST-ONLY clean two-ad pod: poll (sequence 1) + poll (sequence 2).
+  Same pod STRUCTURE as interactive-vast-pod.xml, but ad #2 is a second poll
+  (clean 30s linear, valid SIMID) instead of the game (android.mp4 → AdError 202).
+  Isolates whether the Fire-TV-WebView-118 pod input freeze is caused by the
+  pod structure itself or by the malformed ad #2 (202 duration mismatch).
+  Remove after testing.
+-->
+<VAST xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="vast.xsd" version="3.0">
+  <Ad id="interactive-ctv-poll-1" sequence="1">
+    <InLine>
+      <AdSystem>interactive-ctv-ref</AdSystem>
+      <AdTitle>Interactive CTV Poll — Rate Your Support (1)</AdTitle>
+      <Description>D-pad-driven SIMID interactive poll over a linear video.</Description>
+      <Error>https://creativehubiion.github.io/Interactive-CTV/track/error</Error>
+      <Impression>https://creativehubiion.github.io/Interactive-CTV/track/impression</Impression>
+      <Creatives>
+        <Creative sequence="1">
+          <Linear>
+            <Duration>00:00:30</Duration>
+            <TrackingEvents>
+              <Tracking event="start">https://creativehubiion.github.io/Interactive-CTV/track/start</Tracking>
+              <Tracking event="complete">https://creativehubiion.github.io/Interactive-CTV/track/complete</Tracking>
+              <Tracking event="creativeView">https://creativehubiion.github.io/Interactive-CTV/track/creativeView</Tracking>
+              <Tracking event="skip">https://creativehubiion.github.io/Interactive-CTV/track/skip</Tracking>
+            </TrackingEvents>
+            <VideoClicks>
+              <ClickThrough id="ctv-poll-1">https://creativehubiion.github.io/Interactive-CTV/</ClickThrough>
+            </VideoClicks>
+            <MediaFiles>
+              <MediaFile delivery="progressive" type="video/mp4" width="1280" height="720">
+                https://creativehubiion.github.io/Interactive-CTV/creative/poll/assets/video.mp4
+              </MediaFile>
+              <InteractiveCreativeFile type="text/html" apiFramework="SIMID" variableDuration="true">
+                https://creativehubiion.github.io/Interactive-CTV/creative/poll/index.html?v=9
+              </InteractiveCreativeFile>
+            </MediaFiles>
+          </Linear>
+        </Creative>
+      </Creatives>
+    </InLine>
+  </Ad>
+  <Ad id="interactive-ctv-poll-2" sequence="2">
+    <InLine>
+      <AdSystem>interactive-ctv-ref</AdSystem>
+      <AdTitle>Interactive CTV Poll — Rate Your Support (2)</AdTitle>
+      <Description>D-pad-driven SIMID interactive poll over a linear video.</Description>
+      <Error>https://creativehubiion.github.io/Interactive-CTV/track/error</Error>
+      <Impression>https://creativehubiion.github.io/Interactive-CTV/track/impression</Impression>
+      <Creatives>
+        <Creative sequence="1">
+          <Linear>
+            <Duration>00:00:30</Duration>
+            <TrackingEvents>
+              <Tracking event="start">https://creativehubiion.github.io/Interactive-CTV/track/start</Tracking>
+              <Tracking event="complete">https://creativehubiion.github.io/Interactive-CTV/track/complete</Tracking>
+              <Tracking event="creativeView">https://creativehubiion.github.io/Interactive-CTV/track/creativeView</Tracking>
+              <Tracking event="skip">https://creativehubiion.github.io/Interactive-CTV/track/skip</Tracking>
+            </TrackingEvents>
+            <VideoClicks>
+              <ClickThrough id="ctv-poll-2">https://creativehubiion.github.io/Interactive-CTV/</ClickThrough>
+            </VideoClicks>
+            <MediaFiles>
+              <MediaFile delivery="progressive" type="video/mp4" width="1280" height="720">
+                https://creativehubiion.github.io/Interactive-CTV/creative/poll/assets/video.mp4
+              </MediaFile>
+              <InteractiveCreativeFile type="text/html" apiFramework="SIMID" variableDuration="true">
+                https://creativehubiion.github.io/Interactive-CTV/creative/poll/index.html?v=9
+              </InteractiveCreativeFile>
+            </MediaFiles>
+          </Linear>
+        </Creative>
+      </Creatives>
+    </InLine>
+  </Ad>
+</VAST>
